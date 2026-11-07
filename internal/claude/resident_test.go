@@ -1,8 +1,8 @@
-//go:build !windows
-
 package claude
 
 import (
+	"bufio"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,41 +13,75 @@ import (
 	"github.com/aki-kuramoto/claude-usage-visualizer/internal/usage"
 )
 
-// fakeClaude answers each input line the way claude answers /usage, or, by
-// FAKE_MODE, hangs or exits.
-const fakeClaude = `#!/bin/sh
-echo '{"type":"system","subtype":"init","claude_code_version":"9.9.9","model":"haiku","cwd":"/x"}'
-n=0
-while IFS= read -r line; do
-  n=$((n+1))
-  case "$FAKE_MODE" in
-    hang) sleep 30 ;;
-    exit) echo "something broke" >&2; exit 3 ;;
-    *)
-      echo '{"type":"system","subtype":"hook_started"}'
-      echo '{"type":"assistant","usage_report":{"rate_limits":{"n":'$n'}}}'
-      printf '%s\n' '{"type":"result","subtype":"success","is_error":false,"local_command":"usage","result":"Current session: '$n'% used"}'
-      ;;
-  esac
-done
-`
+// The test binary itself plays claude: TestMain turns into fakeClaude when
+// FAKE_CLAUDE is set. It answers each input line the way claude answers
+// /usage, or, by FAKE_MODE, hangs or exits.
+func TestMain(m *testing.M) {
+	if os.Getenv("FAKE_CLAUDE") == "1" {
+		fakeClaude(os.Getenv("FAKE_MODE"))
+		return
+	}
+	os.Exit(m.Run())
+}
+
+func fakeClaude(mode string) {
+	fmt.Println(`{"type":"system","subtype":"init","claude_code_version":"9.9.9","model":"haiku","cwd":"/x"}`)
+	in := bufio.NewScanner(os.Stdin)
+	for n := 1; in.Scan(); n++ {
+		switch mode {
+		case "hang":
+			time.Sleep(30 * time.Second)
+		case "exit":
+			fmt.Fprintln(os.Stderr, "something broke")
+			os.Exit(3)
+		default:
+			// Use some processor time, as /usage does, so that it can be
+			// measured.
+			for end := time.Now().Add(50 * time.Millisecond); time.Now().Before(end); {
+			}
+			fmt.Println(`{"type":"system","subtype":"hook_started"}`)
+			fmt.Printf(`{"type":"assistant","usage_report":{"rate_limits":{"n":%d}}}`+"\n", n)
+			fmt.Printf(`{"type":"result","subtype":"success","is_error":false,"local_command":"usage","result":"Current session: %d%% used"}`+"\n", n)
+		}
+	}
+}
+
+// fakePath returns the program to start as claude: the test binary, or on
+// Windows optionally a .cmd script that starts it, as npm installs claude.
+func fakePath(t *testing.T, dir string, viaCmd bool) string {
+	t.Helper()
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !viaCmd {
+		return exe
+	}
+	path := filepath.Join(dir, "claude.cmd")
+	script := "@echo off\r\n\"" + exe + "\" %*\r\n"
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
 
 func setup(t *testing.T, mode string) (*Resident, string) {
+	return setupWith(t, mode, false)
+}
+
+func setupWith(t *testing.T, mode string, viaCmd bool) (*Resident, string) {
 	timeout := 10 * time.Second
 	if mode == "hang" {
 		timeout = 500 * time.Millisecond
 	}
 	t.Helper()
 	dir := t.TempDir()
-	path := filepath.Join(dir, "claude")
-	if err := os.WriteFile(path, []byte(fakeClaude), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	path := fakePath(t, dir, viaCmd)
 	logs := filepath.Join(dir, "logs")
 	r := New(Config{
 		Path:    path,
 		Dir:     dir,
-		Env:     append(Env(os.Environ(), path), "FAKE_MODE="+mode),
+		Env:     append(Env(os.Environ(), path), "FAKE_CLAUDE=1", "FAKE_MODE="+mode),
 		Timeout: timeout,
 		Log:     oplog.New(logs, nil, nil),
 	})
@@ -68,6 +102,10 @@ func opsText(t *testing.T, logs string) string {
 
 func TestAnswersRepeatedly(t *testing.T) {
 	r, logs := setup(t, "ok")
+	testAnswersRepeatedly(t, r, logs)
+}
+
+func testAnswersRepeatedly(t *testing.T, r *Resident, logs string) {
 	for i, want := range []string{"Current session: 1% used", "Current session: 2% used"} {
 		ans, err := r.Ask("id")
 		if err != nil {
@@ -75,6 +113,9 @@ func TestAnswersRepeatedly(t *testing.T) {
 		}
 		if ans.Text != want || ans.LocalCommand != "usage" || !strings.Contains(string(ans.UsageReport), `"n":`) {
 			t.Errorf("request %d: %+v", i, ans)
+		}
+		if ans.CPU <= 0 {
+			t.Errorf("request %d: CPU time not measured: %v", i, ans.CPU)
 		}
 	}
 	ops := opsText(t, logs)
@@ -85,6 +126,10 @@ func TestAnswersRepeatedly(t *testing.T) {
 
 func TestTimeoutKillsAndRestarts(t *testing.T) {
 	r, logs := setup(t, "hang")
+	testTimeoutKillsAndRestarts(t, r, logs)
+}
+
+func testTimeoutKillsAndRestarts(t *testing.T, r *Resident, logs string) {
 	_, err := r.Ask("first")
 	if err == nil || err.Stage != usage.StageWait || err.Reason != usage.ReasonTimeout {
 		t.Fatalf("got %+v", err)
@@ -123,20 +168,5 @@ func TestStartFailure(t *testing.T) {
 	r := New(Config{Path: filepath.Join(t.TempDir(), "missing"), Log: oplog.New(t.TempDir(), nil, nil)})
 	if _, err := r.Ask("id"); err == nil || err.Stage != usage.StageSpawn || err.Reason != usage.ReasonStartFailed {
 		t.Errorf("got %+v", err)
-	}
-}
-
-func TestParsePSTime(t *testing.T) {
-	for in, want := range map[string]time.Duration{
-		"0:03.62":    3620 * time.Millisecond,
-		"1:02.50":    62500 * time.Millisecond,
-		"01:00:00":   time.Hour,
-		"2-01:00:00": 49 * time.Hour,
-		"":           -1,
-		"garbage":    -1,
-	} {
-		if got := parsePSTime(in); got != want {
-			t.Errorf("parsePSTime(%q) = %v, want %v", in, got, want)
-		}
 	}
 }

@@ -125,13 +125,19 @@ func TestMoveFile(t *testing.T) {
 	if err := os.WriteFile(path, []byte(src), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	// Compare with the mode the file actually got: Windows has no Unix
+	// permission bits and reports 0666 for any writable file.
+	before, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
 	moved, err := MoveFile(path, today)
 	if err != nil || len(moved) != 1 {
 		t.Fatalf("%v %v", moved, err)
 	}
 	st, _ := os.Stat(path)
-	if st.Mode().Perm() != 0o600 {
-		t.Errorf("mode became %v", st.Mode().Perm())
+	if st.Mode().Perm() != before.Mode().Perm() {
+		t.Errorf("mode became %v, was %v", st.Mode().Perm(), before.Mode().Perm())
 	}
 	if _, err := Parse(mustRead(t, path)); err != nil {
 		t.Error(err)

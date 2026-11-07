@@ -37,7 +37,13 @@ func Find(configured string) (path string, tried []string, err error) {
 func candidates() []string {
 	home, _ := os.UserHomeDir()
 	if runtime.GOOS == "windows" {
-		return []string{filepath.Join(home, ".local", "bin", "claude.exe")}
+		// The native installer puts claude.exe in .local\bin; npm puts a
+		// claude.cmd script in %APPDATA%\npm, which runs claude with node.
+		c := []string{filepath.Join(home, ".local", "bin", "claude.exe")}
+		if appData := os.Getenv("APPDATA"); appData != "" {
+			c = append(c, filepath.Join(appData, "npm", "claude.cmd"))
+		}
+		return c
 	}
 	return []string{
 		filepath.Join(home, ".local", "bin", "claude"),

@@ -16,17 +16,24 @@ func prepare(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 }
 
-func killTree(cmd *exec.Cmd) {
-	if cmd.Process == nil {
+// procSys is empty: the process group made by prepare is enough.
+type procSys struct{}
+
+func started(p *process) {}
+
+func exited(p *process) {}
+
+func killTree(p *process) {
+	if p.cmd.Process == nil {
 		return
 	}
 	// A negative pid signals the whole group.
-	syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+	syscall.Kill(-p.pid(), syscall.SIGKILL)
 }
 
-// cpuTime returns the processor time pid has used so far, or -1.
-func cpuTime(pid int) time.Duration {
-	out, err := exec.Command("ps", "-o", "time=", "-p", strconv.Itoa(pid)).Output()
+// cpuTime returns the processor time claude has used so far, or -1.
+func cpuTime(p *process) time.Duration {
+	out, err := exec.Command("ps", "-o", "time=", "-p", strconv.Itoa(p.pid())).Output()
 	if err != nil {
 		return -1
 	}

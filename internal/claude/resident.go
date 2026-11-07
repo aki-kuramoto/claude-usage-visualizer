@@ -99,7 +99,7 @@ func (r *Resident) Ask(id string) (*Answer, *usage.Error) {
 	p := r.proc
 	p.drain()
 
-	cpuBefore := cpuTime(p.pid())
+	cpuBefore := cpuTime(p)
 	line, _ := json.Marshal(map[string]any{
 		"type":    "user",
 		"message": map[string]any{"role": "user", "content": "/usage"},
@@ -123,7 +123,7 @@ func (r *Resident) Ask(id string) (*Answer, *usage.Error) {
 			case "result":
 				ans.Text = ev.Result
 				ans.LocalCommand = ev.LocalCommand
-				if after := cpuTime(p.pid()); cpuBefore >= 0 && after >= 0 {
+				if after := cpuTime(p); cpuBefore >= 0 && after >= 0 {
 					ans.CPU = after - cpuBefore
 				}
 				if ev.IsError {
@@ -183,12 +183,14 @@ func (r *Resident) start(id string) (*process, *usage.Error) {
 	if err := cmd.Start(); err != nil {
 		return nil, startError(err)
 	}
+	started(p)
 	r.cfg.Log.Add(oplog.KindClaudeStart, id, map[string]any{
 		"path": r.cfg.Path, "args": Args, "dir": r.cfg.Dir, "pid": cmd.Process.Pid,
 	})
 	go p.read(stdout, r.cfg.Log)
 	go func() {
 		p.exitErr = cmd.Wait()
+		exited(p)
 		code := -1
 		if cmd.ProcessState != nil {
 			code = cmd.ProcessState.ExitCode()
@@ -203,7 +205,7 @@ func (r *Resident) start(id string) (*process, *usage.Error) {
 
 func (r *Resident) kill(p *process, id, reason string) {
 	r.cfg.Log.Add(oplog.KindClaudeKill, id, map[string]any{"pid": p.pid(), "reason": reason})
-	killTree(p.cmd)
+	killTree(p)
 	select {
 	case <-p.exited:
 	case <-time.After(5 * time.Second):
@@ -243,6 +245,7 @@ type process struct {
 	exited  chan struct{}
 	exitErr error
 	stderr  *tail
+	sys     procSys
 }
 
 func (p *process) pid() int { return p.cmd.Process.Pid }
