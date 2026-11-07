@@ -1,9 +1,9 @@
 // Command claude-usage-visualizer shows how much of the Claude Code plan
 // limits has been used, and keeps a record of it.
 //
-// On macOS it opens a window. Elsewhere, until the GUI exists there, run it
-// with -headless: it reads and records usage without a window, printing the
-// operation log to standard error.
+// On macOS and Windows it opens a window. Elsewhere, until the GUI exists
+// there, run it with -headless: it reads and records usage without a window,
+// printing the operation log to standard error.
 package main
 
 import (
@@ -22,6 +22,9 @@ func main() {
 	headless := flag.Bool("headless", false, "read and record usage without a window")
 	base := flag.String("base", "", "directory for settings and records (default <home>/.app-data/claude-usage-visualizer)")
 	flag.Parse()
+	if *headless {
+		attachConsole()
+	}
 
 	p, err := paths.Default()
 	if *base != "" {

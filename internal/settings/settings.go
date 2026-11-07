@@ -37,8 +37,9 @@ const (
 	LanguageEnglish  Language = "en"
 )
 
-// CloseAction is what closing the window does. Only macOS asks: elsewhere
-// closing the window always ends the application.
+// CloseAction is what closing the window does. On macOS and Windows the
+// application can keep running without its window (in the Dock, in the
+// notification area); elsewhere closing the window always ends it.
 type CloseAction string
 
 const (
@@ -60,7 +61,7 @@ type Settings struct {
 	AlwaysOnTop bool `setay:"always_on_top" json:"always_on_top"`
 	// Language chooses the language of the window's text.
 	Language Language `setay:"language" json:"language"`
-	// CloseAction is what closing the window does on macOS.
+	// CloseAction is what closing the window does on macOS and Windows.
 	CloseAction CloseAction `setay:"close_action" json:"close_action"`
 	// LoginExpiryCheck has the application start the interactive claude
 	// briefly, about once a day, to read whether the login expires soon.
@@ -87,7 +88,7 @@ var fields = []struct {
 		func(s Settings) any { return s.AlwaysOnTop }},
 	{"language", "The language of the window: 'system' (as the OS is set), 'ja' (Japanese) or 'en' (English).",
 		func(s Settings) any { return string(s.Language) }},
-	{"close_action", "What closing the window does on macOS: 'ask' (ask whether to quit), 'close' (close it and keep recording) or 'quit' (quit without asking).",
+	{"close_action", "What closing the window does on macOS and Windows: 'ask' (ask whether to quit), 'close' (close it and keep recording) or 'quit' (quit without asking).",
 		func(s Settings) any { return string(s.CloseAction) }},
 	{"login_expiry_check", "true checks when the login expires (about once a day, by starting the interactive claude for a few seconds and reading whether it warns of the expiry).",
 		func(s Settings) any { return s.LoginExpiryCheck }},

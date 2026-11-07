@@ -158,6 +158,7 @@ var table = map[Lang]map[string]string{
 		"close_alert_quit":        "終了する",
 		"close_alert_close":       "閉じるだけ",
 		"close_alert_cancel":      "キャンセル",
+		"tray_hint":               "ウィンドウは通知領域のアイコンから開き直せます。",
 	},
 	English: {
 		"window_title":    "Claude Code usage",
@@ -254,6 +255,7 @@ var table = map[Lang]map[string]string{
 		"close_alert_quit":        "Quit",
 		"close_alert_close":       "Just Close",
 		"close_alert_cancel":      "Cancel",
+		"tray_hint":               "You can open the window again from the icon in the notification area.",
 	},
 }
 

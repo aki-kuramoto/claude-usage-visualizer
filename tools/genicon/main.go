@@ -6,7 +6,14 @@
 //	AppIcon.icns          macOS, with the usual margin around the shape
 //	icon.ico              Windows, 16 to 256 pixels in one file
 //
+// and the Windows resources of the executable, the icon and the manifest,
+// into cmd/claude-usage-visualizer as rsrc_windows_<arch>.syso, which go build
+// links in by itself (see syso.go).
+//
 //	go run ./tools/genicon
+//
+// AppIcon.icns needs iconutil, which only macOS has; elsewhere it is left as
+// it is.
 //
 // The design: a gauge around a worried face ">_<". The gauge is amber up to
 // three quarters and red after that, with little left, which is why the face
@@ -126,9 +133,15 @@ func main() {
 		fail(err)
 	}
 
+	if err := writeSysos(filepath.Join(root, "cmd", "claude-usage-visualizer"), pngs, []int{16, 24, 32, 48, 64, 128, 256}); err != nil {
+		fail(err)
+	}
+
 	// macOS: the shape sits inside the canvas with a margin (Apple's grid
 	// puts an 824 pixel shape on a 1024 pixel canvas), with rounder corners.
-	if err := writeICNS(filepath.Join(out, "AppIcon.icns")); err != nil {
+	if _, err := exec.LookPath("iconutil"); err != nil {
+		fmt.Println("==> iconutil not found (it comes with macOS); AppIcon.icns left as it is")
+	} else if err := writeICNS(filepath.Join(out, "AppIcon.icns")); err != nil {
 		fail(err)
 	}
 	fmt.Println("==> wrote", out)
