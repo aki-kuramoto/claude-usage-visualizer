@@ -44,7 +44,7 @@ func install(root, dir string) error {
 	if wasRunning {
 		fmt.Println("The copy that is running is still the old one; quit it from the notification area and start the new one.")
 	} else {
-		fmt.Printf("Start it with: & %q\n", dest)
+		fmt.Printf("Start it with: & '%s'\n", strings.ReplaceAll(dest, "'", "''"))
 	}
 	return nil
 }
