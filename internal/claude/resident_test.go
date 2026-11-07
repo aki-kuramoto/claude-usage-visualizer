@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -114,7 +115,9 @@ func testAnswersRepeatedly(t *testing.T, r *Resident, logs string) {
 		if ans.Text != want || ans.LocalCommand != "usage" || !strings.Contains(string(ans.UsageReport), `"n":`) {
 			t.Errorf("request %d: %+v", i, ans)
 		}
-		if ans.CPU <= 0 {
+		// ps on Linux reports whole seconds, so only Windows (100 ns) is
+		// sure to see the 50 ms the fake spends.
+		if ans.CPU < 0 || (runtime.GOOS == "windows" && ans.CPU == 0) {
 			t.Errorf("request %d: CPU time not measured: %v", i, ans.CPU)
 		}
 	}
