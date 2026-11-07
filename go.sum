@@ -1,0 +1,6 @@
+github.com/aki-kuramoto/setay-go v0.1.10 h1:sR/2ZgoMh1MFwwvXTqbVuZyHCAOJSgvdv7HfFgQ9Px0=
+github.com/aki-kuramoto/setay-go v0.1.10/go.mod h1:hw5LwWelOHKzJIwLB5esG1MW0ko7r7tIkRpZDvyiAhg=
+github.com/aki-kuramoto/wantai v0.2.1 h1:leeUJR8FHm5CqMMnRtB3l0AJDgZ3VEEtk5Zx9yLAnaw=
+github.com/aki-kuramoto/wantai v0.2.1/go.mod h1:JG3ZR9EdH7TH9PUSqMC+YY0SoBO4TXB5Ub/02oC2bmM=
+github.com/creack/pty v1.1.24 h1:bJrF4RRfyJnbTJqzRLHzcGaZK1NeM5kTC9jGgovnR1s=
+github.com/creack/pty v1.1.24/go.mod h1:08sCNb52WyoAwi2QDyzUCTgcvVFhUzewun7wtTfvcwE=
