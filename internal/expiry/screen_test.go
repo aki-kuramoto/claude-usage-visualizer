@@ -55,6 +55,16 @@ func TestNoWarning(t *testing.T) {
 	if r := Classify(raw, true); r.Status != StatusNone {
 		t.Errorf("got %+v", r)
 	}
+	// Windows draws the prompt as ">" (Claude Code 2.1.319 on a pseudo console).
+	windows := []byte("\x1b[H Claude Code v2.1.319\r\n\x1b[37m────────\x1b[1B\r\x1b[39m> \x1b[2mTry \"fix lint errors\"\r\n" +
+		"\x1b[37m────────\x1b[1B\r\x1b[33m⏵⏵ auto mode on\r\n")
+	if r := Classify(windows, true); r.Status != StatusNone {
+		t.Errorf("Windows prompt: got %+v", r)
+	}
+	// A ">" elsewhere is not the prompt.
+	if r := Classify([]byte("Loading > please wait"), true); r.Status != StatusUnknown {
+		t.Errorf("stray >: got %+v", r)
+	}
 	if r := Classify([]byte("loading..."), true); r.Status != StatusUnknown || r.Excerpt != "loading..." {
 		t.Errorf("unrecognised screen: %+v", r)
 	}

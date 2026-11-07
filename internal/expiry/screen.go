@@ -59,8 +59,10 @@ var (
 	expires   = regexp.MustCompile(`Your login expires in (\d+) days?`)
 	trust     = regexp.MustCompile(`Quick safety check|trust this folder|Do you trust the files`)
 	loggedOut = regexp.MustCompile(`Not logged in`)
-	// ready is the input prompt, drawn once claude is ready to be typed to.
-	ready = regexp.MustCompile(`❯`)
+	// ready is the input prompt, drawn once claude is ready to be typed to:
+	// "❯", or on Windows ">" at the start of the input box, just below its
+	// top line (checked with Claude Code 2.1.319 on 2026-11-08).
+	ready = regexp.MustCompile(`❯|─ > `)
 )
 
 // Text turns raw terminal output into plain text, with every escape

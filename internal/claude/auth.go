@@ -25,6 +25,8 @@ func AuthStatus(path, dir string, env []string) (Auth, error) {
 	defer cancel()
 	cmd := exec.CommandContext(ctx, path, "auth", "status", "--json")
 	cmd.Dir = dir
+	// On Windows, without this a console window would flash up each time.
+	prepare(cmd)
 	cmd.Env = env
 	out, err := cmd.Output()
 	var a Auth

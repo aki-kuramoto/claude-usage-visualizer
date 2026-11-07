@@ -21,7 +21,8 @@ type procSys struct {
 }
 
 func prepare(cmd *exec.Cmd) {
-	// No console window for claude when the application has none.
+	// No console window: the application has none of its own, so Windows
+	// would open one for each console program it starts.
 	cmd.SysProcAttr = &windows.SysProcAttr{CreationFlags: windows.CREATE_NO_WINDOW}
 }
 
@@ -54,7 +55,9 @@ func killTree(p *process) {
 	if p.sys.job != nil && p.sys.job.Terminate() == nil {
 		return
 	}
-	if err := exec.Command("taskkill", "/T", "/F", "/PID", strconv.Itoa(p.pid())).Run(); err != nil {
+	kill := exec.Command("taskkill", "/T", "/F", "/PID", strconv.Itoa(p.pid()))
+	prepare(kill)
+	if err := kill.Run(); err != nil {
 		p.cmd.Process.Kill()
 	}
 }
