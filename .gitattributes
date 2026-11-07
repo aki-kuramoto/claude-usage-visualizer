@@ -1,0 +1,4 @@
+# Kept byte for byte on every OS, whatever core.autocrlf says: the captured
+# terminal screens used by the tests, and the Windows resources.
+*.bin binary
+*.syso binary
