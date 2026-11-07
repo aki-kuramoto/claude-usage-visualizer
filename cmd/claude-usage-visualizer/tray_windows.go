@@ -151,6 +151,7 @@ const (
 	tdfAllowDialogCancellation  = 0x0008
 	tdfPositionRelativeToWindow = 0x1000
 	tdWarningIcon               = 0xFFFF // MAKEINTRESOURCE(-1)
+	tdInformationIcon           = 0xFFFD // MAKEINTRESOURCE(-3)
 	idQuit                      = 1001
 	idJustClose                 = 1002
 )
@@ -164,12 +165,14 @@ func (g *gui) askClose() closeChoice {
 	quit := utf16Ptr(g.T("close_alert_quit"))
 	justClose := utf16Ptr(g.T("close_alert_close"))
 	cancel := utf16Ptr(g.T("close_alert_cancel"))
+	// A note at the foot: the question can be turned off in the settings.
+	footer := utf16Ptr(g.T("close_alert_setting"))
 
 	if procTaskDialogIndirect.Find() != nil {
 		// Without version 6 of the common controls (a build without the
 		// manifest): Yes, No and Cancel stand for the three.
 		r := call(procMessageBoxW, uintptr(g.hwnd),
-			ptr(utf16Ptr(g.T("close_alert_title")+"\n\n"+g.T("close_alert_message")+"\n\n"+
+			ptr(utf16Ptr(g.T("close_alert_title")+"\n\n"+g.T("close_alert_message")+"\n"+g.T("close_alert_setting")+"\n\n"+
 				g.T("close_alert_quit")+" / "+g.T("close_alert_close")+" / "+g.T("close_alert_cancel"))),
 			ptr(caption), 0x23) // MB_YESNOCANCEL | MB_ICONQUESTION
 		switch r {
@@ -203,26 +206,26 @@ func (g *gui) askClose() closeChoice {
 	c.ptr(uintptr(unsafe.Pointer(message)))
 	c.u32(3) // cButtons
 	c.ptr(uintptr(unsafe.Pointer(&buttons.b[0])))
-	c.u32(idQuit) // nDefaultButton
-	c.u32(0)      // cRadioButtons
-	c.ptr(0)      // pRadioButtons
-	c.u32(0)      // nDefaultRadioButton
-	c.ptr(0)      // pszVerificationText
-	c.ptr(0)      // pszExpandedInformation
-	c.ptr(0)      // pszExpandedControlText
-	c.ptr(0)      // pszCollapsedControlText
-	c.ptr(0)      // hFooterIcon
-	c.ptr(0)      // pszFooter
-	c.ptr(0)      // pfCallback
-	c.ptr(0)      // lpCallbackData
-	c.u32(0)      // cxWidth
+	c.u32(idQuit)                          // nDefaultButton
+	c.u32(0)                               // cRadioButtons
+	c.ptr(0)                               // pRadioButtons
+	c.u32(0)                               // nDefaultRadioButton
+	c.ptr(0)                               // pszVerificationText
+	c.ptr(0)                               // pszExpandedInformation
+	c.ptr(0)                               // pszExpandedControlText
+	c.ptr(0)                               // pszCollapsedControlText
+	c.ptr(tdInformationIcon)               // hFooterIcon
+	c.ptr(uintptr(unsafe.Pointer(footer))) // pszFooter
+	c.ptr(0)                               // pfCallback
+	c.ptr(0)                               // lpCallbackData
+	c.u32(0)                               // cxWidth
 	size := uint32(len(c.b))
 	c.b[0], c.b[1], c.b[2], c.b[3] = byte(size), byte(size>>8), byte(size>>16), byte(size>>24)
 
 	var pressed int32
 	hr := call(procTaskDialogIndirect, uintptr(unsafe.Pointer(&c.b[0])), uintptr(unsafe.Pointer(&pressed)), 0, 0)
 	runtime.KeepAlive(buttons)
-	runtime.KeepAlive([]*uint16{title, message, caption, quit, justClose, cancel})
+	runtime.KeepAlive([]*uint16{title, message, caption, quit, justClose, cancel, footer})
 	if hr != 0 {
 		return closeChoiceCancel
 	}

@@ -742,7 +742,7 @@ static CUVAppDelegate *delegate;
     }
     NSAlert *alert = [[NSAlert alloc] init];
     alert.messageText = [self T:@"close_alert_title"];
-    alert.informativeText = [self T:@"close_alert_message"];
+    alert.informativeText = [NSString stringWithFormat:@"%@\n\n%@", [self T:@"close_alert_message"], [self T:@"close_alert_setting"]];
     [alert addButtonWithTitle:[self T:@"close_alert_quit"]];
     [alert addButtonWithTitle:[self T:@"close_alert_close"]];
     NSButton *cancel = [alert addButtonWithTitle:[self T:@"close_alert_cancel"]];
