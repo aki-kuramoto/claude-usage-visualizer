@@ -74,6 +74,9 @@ func TestNormalizeReset(t *testing.T) {
 	}{
 		{"Oct 15 at 2:20pm (Asia/Tokyo)", time.Date(2026, 10, 15, 12, 0, 0, 0, tokyo), "2026-10-15T05:20:00Z"},
 		{"Oct 22 at 7am (Asia/Tokyo)", time.Date(2026, 10, 15, 12, 0, 0, 0, tokyo), "2026-10-21T22:00:00Z"},
+		// The form of Claude Code 2.1.319: a comma instead of "at".
+		{"Nov 8, 11:30am (Asia/Tokyo)", time.Date(2026, 11, 8, 8, 5, 0, 0, tokyo), "2026-11-08T02:30:00Z"},
+		{"Nov 9, 5pm (Asia/Tokyo)", time.Date(2026, 11, 8, 8, 5, 0, 0, tokyo), "2026-11-09T08:00:00Z"},
 		// The reset falls in the next year.
 		{"Jan 2 at 7am (Asia/Tokyo)", time.Date(2026, 12, 30, 12, 0, 0, 0, tokyo), "2027-01-01T22:00:00Z"},
 		// Read just after New Year, a reset printed before it was in the old year.
@@ -112,6 +115,7 @@ func TestNormalizeResetRejects(t *testing.T) {
 		{"Oct 22 at 13pm (Asia/Tokyo)", ReasonUnexpectedFormat},
 		{"Feb 30 at 7am (Asia/Tokyo)", ReasonUnexpectedFormat},
 		{"Foo 3 at 7am (Asia/Tokyo)", ReasonUnexpectedFormat},
+		{"Nov 8 11:30am (Asia/Tokyo)", ReasonUnexpectedFormat},
 	}
 	for _, tt := range tests {
 		_, err := normalizeReset(tt.text, at)

@@ -11,7 +11,19 @@ This is not an Anthropic product, and is not affiliated with or endorsed by Anth
 
 ## Requirements
 
-- Claude Code (the `claude` command), logged in with a Claude subscription. The app reads the usage through it. It looks in `PATH` and where the installers put it; on Windows, `%USERPROFILE%\.local\bin\claude.exe` (the native installer) and `%APPDATA%\npm\claude.cmd` (npm). Elsewhere, set its path in the settings. The copy of Claude Code inside Claude Desktop is not looked for.
+- Claude Code (the `claude` command), logged in with a Claude subscription. The app reads the usage through it. It looks in `PATH` and where the installers put it; on Windows, `%USERPROFILE%\.local\bin\claude.exe` (the native installer) and `%APPDATA%\npm\claude.cmd` (npm). Elsewhere, set its path in the settings. The copy of Claude Code inside Claude Desktop is not looked for: it changes place with every update, and it is not logged in on its own. If you only have Claude Desktop, install the command too, then start `claude` once and log in:
+
+  ```powershell
+  # Windows (PowerShell)
+  irm https://claude.ai/install.ps1 | iex
+  ```
+
+  ```bash
+  # macOS, Linux
+  curl -fsSL https://claude.ai/install.sh | bash
+  ```
+
+  The app notices the new `claude` by itself within a minute; it need not be restarted.
 - To build: Go 1.24 or later. On macOS, also the Xcode command line tools. On Windows, nothing else (no C compiler).
 
 ## Install (macOS)
@@ -169,7 +181,19 @@ Anthropic の製品ではなく、Anthropic とは関係がありません。
 
 ## 必要なもの
 
-- Claude Code (`claude` コマンド) に、Claude のサブスクリプションでログインしていること。アプリはこれを通して使用量を読みます。`PATH` と、インストーラーが置く場所から探します。Windows では `%USERPROFILE%\.local\bin\claude.exe` (公式のインストーラー) と `%APPDATA%\npm\claude.cmd` (npm) です。ほかの場所にあるときは、設定で場所を指定してください。Claude Desktop の中にある Claude Code は探しません。
+- Claude Code (`claude` コマンド) に、Claude のサブスクリプションでログインしていること。アプリはこれを通して使用量を読みます。`PATH` と、インストーラーが置く場所から探します。Windows では `%USERPROFILE%\.local\bin\claude.exe` (公式のインストーラー) と `%APPDATA%\npm\claude.cmd` (npm) です。ほかの場所にあるときは、設定で場所を指定してください。Claude Desktop の中にある Claude Code は探しません。更新のたびに場所が変わるうえ、それ単体ではログインしていないためです。Claude Desktop しか入れていないときは、コマンドも入れて、一度 `claude` を起動してログインしてください。
+
+  ```powershell
+  # Windows (PowerShell)
+  irm https://claude.ai/install.ps1 | iex
+  ```
+
+  ```bash
+  # macOS、Linux
+  curl -fsSL https://claude.ai/install.sh | bash
+  ```
+
+  入れた `claude` は、アプリが 1 分以内に自分で見つけます。アプリを起動し直す必要はありません。
 - ビルドには Go 1.24 以降が要ります。macOS では Xcode のコマンドラインツールも要ります。Windows ではほかに何も要りません (C コンパイラーも不要です)。
 
 ## 入れ方 (macOS)

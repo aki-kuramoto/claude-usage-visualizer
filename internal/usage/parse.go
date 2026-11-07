@@ -54,8 +54,10 @@ func Parse(text string) (*Raw, *Error) {
 	return raw, nil
 }
 
-// resetTime matches "Oct 15 at 2:20pm (Asia/Tokyo)" and "7am (Asia/Tokyo)".
-var resetTime = regexp.MustCompile(`^(?:([A-Z][a-z]{2}) (\d{1,2}) at )?(\d{1,2})(?::(\d{2}))?(am|pm)(?: \(([^)]+)\))?$`)
+// resetTime matches "Oct 15 at 2:20pm (Asia/Tokyo)" and "7am (Asia/Tokyo)",
+// and "Nov 8, 11:30am (Asia/Tokyo)", the form Claude Code 2.1.319 (checked
+// on 2026-11-08) prints instead of the first.
+var resetTime = regexp.MustCompile(`^(?:([A-Z][a-z]{2}) (\d{1,2})(?: at|,) )?(\d{1,2})(?::(\d{2}))?(am|pm)(?: \(([^)]+)\))?$`)
 
 // Normalize converts the pieces into fixed forms. at is when the text was
 // read; the reset times carry no year, and some carry no date, so these are
