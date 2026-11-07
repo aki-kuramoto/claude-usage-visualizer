@@ -5,9 +5,11 @@
 //	go run ./tools/local-install -q         skip vet and test
 //	go run ./tools/local-install -dir DIR   install into DIR instead
 //
-// On macOS it builds ClaudeUsageVisualizer.app into ~/Applications. Elsewhere,
-// where there is no window yet, it installs the bare executable (to be run
-// with -headless) where `go install` would put it.
+// On macOS it builds ClaudeUsageVisualizer.app into ~/Applications. On
+// Windows it builds claude-usage-visualizer.exe, a GUI program, into
+// ~/programs/claude-usage-visualizer. Elsewhere, where there is no window yet,
+// it installs the bare executable (to be run with -headless) where `go
+// install` would put it.
 //
 // The new copy is built next to the destination under a temporary name and
 // then moved into place, so a copy that is running keeps working until it is
@@ -25,7 +27,7 @@ import (
 
 func main() {
 	quick := flag.Bool("q", false, "skip go vet and go test")
-	dir := flag.String("dir", "", "install directory (default: ~/Applications on macOS, else where go install puts binaries)")
+	dir := flag.String("dir", "", "install directory (default: ~/Applications on macOS, ~/programs/claude-usage-visualizer on Windows, else where go install puts binaries)")
 	flag.Parse()
 	if err := run(*quick, *dir); err != nil {
 		fmt.Fprintln(os.Stderr, "local-install:", err)
