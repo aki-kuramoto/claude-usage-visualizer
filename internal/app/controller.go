@@ -784,13 +784,34 @@ func (c *Controller) setExpiry(e *LoginExpiry) {
 func FormatTime(t time.Time) string { return usage.FormatAt(t) }
 
 // NoteTrustOpened logs that a terminal was opened to trust the working
-// directory, and looks again a little later, when the user may be done.
+// directory, and looks again a few times over the next minutes, when the user
+// may be done, so that the request to trust goes away soon after. A look
+// while the folder is still untrusted takes about a second.
 func (c *Controller) NoteTrustOpened(script string, err error) {
 	data := map[string]any{"script": script}
 	if err != nil {
 		data["error"] = err.Error()
 	}
 	c.log.Add(oplog.KindTrustOpened, "", data)
+	if err != nil {
+		return
+	}
+	go func() {
+		for _, d := range trustFollowUps {
+			time.Sleep(d)
+			c.CheckExpiryNow("trust_opened")
+		}
+	}()
+}
+
+// trustFollowUps are the waits between the looks after the terminal to trust
+// the folder is opened.
+var trustFollowUps = []time.Duration{30 * time.Second, 30 * time.Second, time.Minute, 2 * time.Minute, 5 * time.Minute}
+
+// NoteTrustClosed looks again at once when the terminal opened to trust the
+// folder has closed, where the window can tell (on Windows).
+func (c *Controller) NoteTrustClosed() {
+	c.CheckExpiryNow("trust_closed")
 }
 
 // ErrorKinds are the values of State.ErrorKind. The display has, for each, a

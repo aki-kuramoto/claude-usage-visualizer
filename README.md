@@ -129,7 +129,7 @@ To turn it off, clear "Check when the login expires" in the settings, or write `
 
 When the interactive `claude` starts in a directory you have not trusted yet, it first asks whether you trust it. The app's working directory (`~/.app-data/claude-usage-visualizer/work/`) starts out untrusted, so the question comes before the warning the app is looking for.
 
-That question is Claude Code's safety check, and your answer is written to Claude Code's settings, so the app never answers it for you. Instead, the window says the directory needs to be trusted once, with a "Trust the Folder…" button. The button opens a terminal (on Windows, a console window) that starts `claude` in the working directory: answer "Yes, I trust this folder", and leave with `/exit` once `claude` has started. The directory belongs to this app and stays empty. If you would rather not trust it, turn the check off instead.
+That question is Claude Code's safety check, and your answer is written to Claude Code's settings, so the app never answers it for you. Instead, the window says the directory needs to be trusted once, with a "Trust the Folder…" button. The button opens a terminal (on Windows, a console window) that starts `claude` in the working directory: answer "Yes, I trust this folder" (the question starts on "No, exit", so press the down arrow before Enter), and leave with `/exit` once `claude` has started. The app looks again a few times over the next minutes (on Windows also as soon as the console closes), and the button goes away once the folder is trusted. The directory belongs to this app and stays empty. If you would rather not trust it, turn the check off instead.
 
 ## The usage record
 
@@ -299,7 +299,7 @@ Claude Code のログインには期限があります。期限が近づくと�
 
 まだ信頼していないフォルダーで対話モードの `claude` を起動すると、Claude Code はまずそのフォルダーを信頼するかを確認します。アプリの作業フォルダー (`~/.app-data/claude-usage-visualizer/work/`) も最初は信頼されていないので、この確認が先に出て、アプリが探している知らせにたどり着けません。
 
-この確認は Claude Code の安全の仕組みで、答えは Claude Code の設定に書き込まれるので、アプリが代わりに答えることはしません。代わりにウィンドウに、作業フォルダーを一度だけ信頼する必要があることと「フォルダーを信頼する…」ボタンを出します。ボタンを押すとターミナル (Windows ではコンソールのウィンドウ) が開き、作業フォルダーで `claude` が起動します。「Yes, I trust this folder」と答え、`claude` が起動したら `/exit` で終了してください。このフォルダーはこのアプリ専用で、中身は空のままです。信頼したくない場合は、代わりに期限の確認を外してください。
+この確認は Claude Code の安全の仕組みで、答えは Claude Code の設定に書き込まれるので、アプリが代わりに答えることはしません。代わりにウィンドウに、作業フォルダーを一度だけ信頼する必要があることと「フォルダーを信頼する…」ボタンを出します。ボタンを押すとターミナル (Windows ではコンソールのウィンドウ) が開き、作業フォルダーで `claude` が起動します。「Yes, I trust this folder」と答え (最初は「No, exit」が選ばれているので、↓ キーで移ってから Enter を押します)、`claude` が起動したら `/exit` で終了してください。アプリはそのあと数分の間に何度か確かめ直し (Windows ではコンソールを閉じた時点でも確かめます)、信頼されていればボタンは消えます。このフォルダーはこのアプリ専用で、中身は空のままです。信頼したくない場合は、代わりに期限の確認を外してください。
 
 ## 使用量の記録
 

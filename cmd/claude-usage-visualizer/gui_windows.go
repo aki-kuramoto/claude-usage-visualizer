@@ -974,7 +974,7 @@ func (g *gui) openLogin() {
 			"rem Written by claude-usage-visualizer to log Claude Code in again.\r\n" +
 			"call " + cmdQuote(path) + " auth login\r\n" +
 			"pause\r\n"
-		return runScript(script, body)
+		return runScript(script, body, nil)
 	}()
 	g.ctrl.NoteLoginOpened(script, err)
 	if err != nil {
@@ -999,8 +999,11 @@ func (g *gui) openTrust() {
 			"cd /d " + cmdQuote(g.ctrl.WorkDir()) + " || exit /b 1\r\n" +
 			"echo " + cmdEcho(g.T("trust_script_message")) + "\r\n" +
 			"echo.\r\n" +
-			"call " + cmdQuote(path) + " --strict-mcp-config\r\n"
-		return runScript(script, body)
+			"call " + cmdQuote(path) + " --strict-mcp-config\r\n" +
+			"pause\r\n"
+		// Look again as soon as the console is closed, so that the request
+		// to trust goes away at once when the folder was trusted.
+		return runScript(script, body, g.ctrl.NoteTrustClosed)
 	}()
 	g.ctrl.NoteTrustOpened(script, err)
 	if err != nil {
@@ -1009,7 +1012,9 @@ func (g *gui) openTrust() {
 }
 
 // runScript writes a batch file and runs it in a console window of its own.
-func runScript(path, body string) error {
+// done, when not nil, is called (on another goroutine) once the console has
+// closed.
+func runScript(path, body string, done func()) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
@@ -1025,7 +1030,12 @@ func runScript(path, body string) error {
 	if err := cmd.Start(); err != nil {
 		return err
 	}
-	go cmd.Wait()
+	go func() {
+		cmd.Wait()
+		if done != nil {
+			done()
+		}
+	}()
 	return nil
 }
 
