@@ -23,7 +23,6 @@ import (
 	"image"
 	"image/png"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -1023,20 +1022,51 @@ func runScript(path, body string, done func()) error {
 	}
 	comspec := os.Getenv("ComSpec")
 	if comspec == "" {
-		comspec = "cmd.exe"
+		comspec = filepath.Join(os.Getenv("SystemRoot"), "System32", "cmd.exe")
 	}
-	cmd := exec.Command(comspec, "/c", path)
-	cmd.SysProcAttr = &windows.SysProcAttr{CreationFlags: windows.CREATE_NEW_CONSOLE}
-	if err := cmd.Start(); err != nil {
+	// /s takes off only the outer quotes, leaving the quoted path intact
+	// whatever it holds.
+	process, err := startInNewConsole(comspec, `"`+comspec+`" /d /s /c ""`+path+`""`, filepath.Dir(path))
+	if err != nil {
 		return err
 	}
 	go func() {
-		cmd.Wait()
+		windows.WaitForSingleObject(process, windows.INFINITE)
+		windows.CloseHandle(process)
 		if done != nil {
 			done()
 		}
 	}()
 	return nil
+}
+
+// startInNewConsole starts a program in a console window of its own, whose
+// keyboard and screen are its standard input and output. os/exec cannot do
+// this: it always hands the program standard handles, which for an
+// application without a console of its own are the NUL device, so the
+// interactive claude would see no keyboard and end at once. It returns the
+// process's handle, which the caller closes.
+func startInNewConsole(app, cmdLine, dir string) (windows.Handle, error) {
+	appPtr, err := windows.UTF16PtrFromString(app)
+	if err != nil {
+		return 0, err
+	}
+	cmdPtr, err := windows.UTF16PtrFromString(cmdLine)
+	if err != nil {
+		return 0, err
+	}
+	dirPtr, err := windows.UTF16PtrFromString(dir)
+	if err != nil {
+		return 0, err
+	}
+	si := windows.StartupInfo{}
+	si.Cb = uint32(unsafe.Sizeof(si))
+	var pi windows.ProcessInformation
+	if err := windows.CreateProcess(appPtr, cmdPtr, nil, nil, false, windows.CREATE_NEW_CONSOLE, nil, dirPtr, &si, &pi); err != nil {
+		return 0, err
+	}
+	windows.CloseHandle(pi.Thread)
+	return pi.Process, nil
 }
 
 // cmdQuote quotes a path for a batch file.
