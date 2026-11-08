@@ -739,9 +739,9 @@ func (g *gui) layOut() layout {
 	box, boxTop, boxSide := s.px(t.BoxSize), s.px(t.BoxTop), s.px(t.BoxSide)
 	lay.closeBox = RECT{boxSide, boxTop, boxSide + box, boxTop + box}
 	lay.shadeBox = RECT{lay.width - boxSide - box, boxTop, lay.width - boxSide, boxTop + box}
-	// The minimize box, just left of the window-shade box: their gaps in the
-	// stripes meet, so that the two read as a pair.
-	pair := lay.shadeBox.Left - 2*s.px(t.BoxGap)
+	// The minimize box, a point left of the window-shade box, so that the
+	// two read as a pair.
+	pair := lay.shadeBox.Left - s.px(1)
 	lay.minimizeBox = RECT{pair - box, boxTop, pair, boxTop + box}
 
 	// The title: centred on the window when it fits, otherwise in the room
