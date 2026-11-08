@@ -213,6 +213,7 @@ const (
 	SW_HIDE       = 0
 	SW_SHOWNORMAL = 1
 	SW_SHOW       = 5
+	SW_MINIMIZE   = 6
 	SW_RESTORE    = 9
 	SW_SHOWNA     = 8
 

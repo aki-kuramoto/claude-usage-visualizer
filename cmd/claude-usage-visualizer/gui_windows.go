@@ -67,6 +67,7 @@ const (
 	boxNone = iota
 	boxClose
 	boxShade
+	boxMinimize
 )
 
 // gui is the application's windows. Its fields belong to the window thread,
@@ -367,10 +368,14 @@ func mainProc(hwnd windows.HWND, msg uint32, w, l uintptr) uintptr {
 			call(procReleaseCapture)
 			g.invalidate()
 			if inside {
-				if box == boxClose {
+				switch box {
+				case boxClose:
 					g.performClose()
-				} else {
+				case boxShade:
 					g.toggleCompact()
+				case boxMinimize:
+					call(procShowWindow, uintptr(g.hwnd), SW_MINIMIZE)
+					g.ctrl.NoteWindow("minimize")
 				}
 			}
 		}
@@ -483,6 +488,8 @@ func (g *gui) boxAt(pt POINT) int {
 		return boxClose
 	case inRect(pt, g.lay.shadeBox):
 		return boxShade
+	case inRect(pt, g.lay.minimizeBox):
+		return boxMinimize
 	}
 	return boxNone
 }
@@ -732,6 +739,10 @@ func (g *gui) layOut() layout {
 	box, boxTop, boxSide := s.px(t.BoxSize), s.px(t.BoxTop), s.px(t.BoxSide)
 	lay.closeBox = RECT{boxSide, boxTop, boxSide + box, boxTop + box}
 	lay.shadeBox = RECT{lay.width - boxSide - box, boxTop, lay.width - boxSide, boxTop + box}
+	// The minimize box, just left of the window-shade box: their gaps in the
+	// stripes meet, so that the two read as a pair.
+	pair := lay.shadeBox.Left - 2*s.px(t.BoxGap)
+	lay.minimizeBox = RECT{pair - box, boxTop, pair, boxTop + box}
 
 	// The title: centred on the window when it fits, otherwise in the room
 	// between the boxes, where it is cut off. The compact view's title
@@ -742,7 +753,7 @@ func (g *gui) layOut() layout {
 	}
 	if lay.title != "" {
 		gap := s.px(t.BoxGap) + s.px(t.TitleGap)
-		left, right := lay.closeBox.Right+gap, lay.shadeBox.Left-gap
+		left, right := lay.closeBox.Right+gap, lay.minimizeBox.Left-gap
 		tw, th := measure(dc, lay.title, g.fonts.get(s, titleSize(t), t.TitleBold), 0)
 		tw = min(tw, max(right-left, 0))
 		x := min(max(lay.width/2-tw/2, left), right-tw)

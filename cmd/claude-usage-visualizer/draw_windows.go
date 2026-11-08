@@ -236,9 +236,9 @@ type layout struct {
 	height  int32
 	compact bool
 
-	closeBox, shadeBox RECT
-	title              string
-	titleRect          RECT
+	closeBox, shadeBox, minimizeBox RECT
+	title                           string
+	titleRect                       RECT
 
 	menus []menuTitle
 
@@ -277,6 +277,7 @@ func (g *gui) paintFrame(p painter, lay *layout, active bool) {
 	gaps := []span{
 		{lay.closeBox.Left - boxGap, lay.closeBox.Right + boxGap},
 		{lay.shadeBox.Left - boxGap, lay.shadeBox.Right + boxGap},
+		{lay.minimizeBox.Left - boxGap, lay.minimizeBox.Right + boxGap},
 	}
 	if lay.titleRect.Right > lay.titleRect.Left {
 		gaps = append(gaps, span{lay.titleRect.Left - titleGap, lay.titleRect.Right + titleGap})
@@ -316,8 +317,9 @@ func (g *gui) paintFrame(p painter, lay *layout, active bool) {
 	p.bevel(look.BevelLight, look.BevelDark, full, l)
 	p.frame(look.Border, full, l)
 
-	g.paintBox(p, lay.closeBox, false, look, g.pressed == boxClose)
-	g.paintBox(p, lay.shadeBox, true, look, g.pressed == boxShade)
+	g.paintBox(p, lay.closeBox, boxClose, look, g.pressed == boxClose)
+	g.paintBox(p, lay.shadeBox, boxShade, look, g.pressed == boxShade)
+	g.paintBox(p, lay.minimizeBox, boxMinimize, look, g.pressed == boxMinimize)
 
 	for i, m := range lay.menus {
 		c, ok := colorOf(look.MenuText)
@@ -350,9 +352,10 @@ func menuSize(t theme.Theme) float64 {
 	return 12
 }
 
-// paintBox draws the close box (an X inside) or the window-shade box (two
-// lines inside), raised, or sunk while pressed.
-func (g *gui) paintBox(p painter, r RECT, shade bool, look theme.Look, pressed bool) {
+// paintBox draws the close box (an X inside), the window-shade box (two
+// lines inside) or the minimize box (one line low inside, as on Windows),
+// raised, or sunk while pressed.
+func (g *gui) paintBox(p painter, r RECT, kind int, look theme.Look, pressed bool) {
 	t := g.state.Theme
 	s := p.s
 	l := s.line()
@@ -374,7 +377,12 @@ func (g *gui) paintBox(p painter, r RECT, shade bool, look theme.Look, pressed b
 	}
 	in := s.px(t.GlyphInset)
 	w, h := r.Right-r.Left, r.Bottom-r.Top
-	if !shade {
+	switch kind {
+	case boxMinimize:
+		bottom := r.Bottom - in
+		p.fill(c, RECT{r.Left + in, bottom - l, r.Right - in, bottom})
+		return
+	case boxClose:
 		pen := max(1, s.px(1.2))
 		// LineTo leaves out the last pixel; go one further.
 		p.lineSeg(c, pen, r.Left+in, r.Top+in, r.Right-in, r.Bottom-in)
