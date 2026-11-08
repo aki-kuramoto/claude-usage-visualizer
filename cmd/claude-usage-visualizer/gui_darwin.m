@@ -268,6 +268,7 @@ static NSString *fill(NSString *text, NSString *name, NSString *value) {
 // The boxes, which the stripes leave gaps around.
 @property(nonatomic, strong) NSView *closeBox;
 @property(nonatomic, strong) NSView *shadeBox;
+@property(nonatomic, strong) NSView *minimizeBox;
 - (NSDictionary *)look;
 @end
 
@@ -297,10 +298,11 @@ static void fillLine(NSColor *c, NSRect r) {
     }
 }
 
-// CUVBoxView is the close box (an X inside) or the window-shade box (two
-// lines inside). Like a button of the classic Mac OS, it acts when the mouse
+// CUVBoxView is the close box (an X inside), the window-shade box (two lines
+// inside) or the minimize box (one line low inside, as on Windows). Like a
+// button of the classic Mac OS, it acts when the mouse
 // is released over it, and looks pressed while the mouse is held down on it.
-typedef NS_ENUM(NSInteger, CUVBoxKind) { CUVBoxClose, CUVBoxShade };
+typedef NS_ENUM(NSInteger, CUVBoxKind) { CUVBoxClose, CUVBoxShade, CUVBoxMinimize };
 
 @interface CUVBoxView : NSView
 @property(nonatomic) CUVBoxKind kind;
@@ -354,6 +356,8 @@ typedef NS_ENUM(NSInteger, CUVBoxKind) { CUVBoxClose, CUVBoxShade };
         [x moveToPoint:NSMakePoint(w - in, in)];
         [x lineToPoint:NSMakePoint(in, h - in)];
         [x stroke];
+    } else if (self.kind == CUVBoxMinimize) {
+        NSRectFill(NSMakeRect(in, h - in - 1, w - 2 * in, 1));
     } else {
         CGFloat mid = floor(h / 2);
         NSRectFill(NSMakeRect(in, mid - 1, w - 2 * in, 1));
@@ -512,7 +516,7 @@ typedef NS_ENUM(NSInteger, CUVBoxKind) { CUVBoxClose, CUVBoxShade };
     NSDictionary *t = self.theme;
     CGFloat w = self.bounds.size.width;
     CGFloat gap = themeNumber(t, @"box_gap") + themeNumber(t, @"title_gap");
-    CGFloat left = NSMaxX(self.closeBox.frame) + gap, right = NSMinX(self.shadeBox.frame) - gap;
+    CGFloat left = NSMaxX(self.closeBox.frame) + gap, right = NSMinX(self.minimizeBox.frame) - gap;
     CGFloat textW = ceil([self.title sizeWithAttributes:@{NSFontAttributeName : self.titleFont}].width);
     CGFloat tw = MIN(textW, MAX(right - left, 0));
     CGFloat x = MIN(MAX(round(w / 2 - tw / 2), left), right - tw);
@@ -530,7 +534,7 @@ typedef NS_ENUM(NSInteger, CUVBoxKind) { CUVBoxClose, CUVBoxShade };
     NSRect title = self.title.length > 0 ? self.titleRect : NSZeroRect;
     CGFloat boxGap = themeNumber(t, @"box_gap"), titleGap = themeNumber(t, @"title_gap");
     NSMutableArray<NSValue *> *gaps = [NSMutableArray array];
-    for (NSView *box in @[ self.closeBox, self.shadeBox ]) {
+    for (NSView *box in @[ self.closeBox, self.shadeBox, self.minimizeBox ]) {
         [gaps addObject:[NSValue valueWithRange:NSMakeRange(NSMinX(box.frame) - boxGap, box.frame.size.width + 2 * boxGap)]];
     }
     if (title.size.width > 0) {
@@ -886,10 +890,18 @@ static CUVAppDelegate *delegate;
     shade.action = ^{
         [weakSelf toggleCompact:nil];
     };
+    CUVBoxView *minimize = [[CUVBoxView alloc] initWithFrame:NSZeroRect];
+    minimize.kind = CUVBoxMinimize;
+    minimize.action = ^{
+        [weakSelf.window performMiniaturize:nil];
+        goNoteWindow("minimize");
+    };
     [frame addSubview:close];
     [frame addSubview:shade];
+    [frame addSubview:minimize];
     frame.closeBox = close;
     frame.shadeBox = shade;
+    frame.minimizeBox = minimize;
 
     // The contents' height comes from the stack; the window is then sized
     // to it (see fitWindow), so nothing ties the contents to the window's
@@ -942,10 +954,15 @@ static CUVAppDelegate *delegate;
 
     CGFloat box = themeNumber(t, @"box_size"), boxTop = themeNumber(t, @"box_top"), boxSide = themeNumber(t, @"box_side");
     CUVBoxView *close = (CUVBoxView *)self.frameView.closeBox, *shade = (CUVBoxView *)self.frameView.shadeBox;
+    CUVBoxView *minimize = (CUVBoxView *)self.frameView.minimizeBox;
     close.frame = NSMakeRect(boxSide, boxTop, box, box);
     shade.frame = NSMakeRect(kWidth - boxSide - box, boxTop, box, box);
+    // The minimize box, a point left of the window-shade box, so that the
+    // two read as a pair.
+    minimize.frame = NSMakeRect(NSMinX(shade.frame) - 1 - box, boxTop, box, box);
     close.label = [self T:@"menu_close"];
     shade.label = [self T:@"menu_compact"];
+    minimize.label = [self T:@"menu_minimize"];
 
     CGFloat inset = themeNumber(t, @"frame_inset");
     self.containerTop.constant = themeNumber(t, @"title_bar_height") + themeNumber(t, @"menu_bar_height");

@@ -56,7 +56,7 @@ go run ./cmd/claude-usage-visualizer -headless
 - The five-hour limit starts with the first use, so while nothing has been used Claude Code gives no reset time for it. The bar is then drawn as if the period started now: the line at the left edge, and the ticks where they would fall.
 - The small triangle above a weekly bar is the time elapsed counted only by the days you use Claude; the small triangle below it is the time elapsed judged by the days still ahead. Both come from a file you can edit (see "Days" below).
 - When a reading fails, the bars turn gray, and the window says what went wrong and what to do.
-- The title bar is drawn by the app itself, in the style of the classic Mac OS. The box with an X on the left closes the window; the box on the right switches to the **compact view**. On Windows, the box just left of it, with a line at the bottom, minimizes the window to the taskbar. Drag the title bar to move the window.
+- The title bar is drawn by the app itself, in the style of the classic Mac OS. The box with an X on the left closes the window; the box on the right switches to the **compact view**. The box just left of it, with a line at the bottom, minimizes the window (to the Dock on macOS, to the taskbar on Windows). Drag the title bar to move the window.
 - **Compact view**: like the window shade of the classic Mac OS, the window keeps its width and shrinks to its title bar, and the title shows the five-hour limit and the weekly limit for all models, such as "5h 21%  ·  week 42%". When nothing can be read, the title says only that. Switch back with the same box, a double-click on the title bar, or View > Compact View (Cmd+Shift+C on macOS, Ctrl+Shift+C on Windows).
 - The menu bar inside the window (Usage, View, Settings) has Read Now, Compact View and Settings. On macOS, the same items are also in the menu bar at the top of the screen.
 - Two looks: Platinum (in the style of Mac OS 8, the default) and System 7. Choose in the settings.
@@ -229,7 +229,7 @@ go run ./cmd/claude-usage-visualizer -headless
 - 5 時間枠は最初に使ったときに始まるので、まだ使っていない間は Claude Code がリセット時刻を出しません。そのときは、いま始まったものとしてバーを描きます (線は左端、区切りはいま始まった場合の位置)。
 - 週の枠のバーの上の小さな三角は、Claude を使う日だけで数えたときの経過です。バーの下の小さな三角は、これから先の日の重みから見た経過です。どちらも、自分で書き換えられるファイルから計算します (下の「日の設定」)。
 - 取得に失敗したときは、バーを灰色にして、何が起きていて何をすればよいかを出します。
-- タイトルバーは、昔の Mac OS の雰囲気でアプリ自身が描いています。左の X の箱で閉じ、右の箱で**小さく表示**に切り替えます。Windows では、そのすぐ左の、下に線のある箱で、ウィンドウをタスクバーに最小化します。タイトルバーをドラッグすると移動できます。
+- タイトルバーは、昔の Mac OS の雰囲気でアプリ自身が描いています。左の X の箱で閉じ、右の箱で**小さく表示**に切り替えます。そのすぐ左の、下に線のある箱で、ウィンドウを最小化します (macOS では Dock に、Windows ではタスクバーに)。タイトルバーをドラッグすると移動できます。
 - **小さく表示**: 昔の Mac OS のウインドウシェードのように、ウィンドウが幅はそのままでタイトルバーだけになり、タイトルに 5 時間枠と全モデルの週の枠 (「5h 21%  ·  週 42%」など) が出ます。取得できていないときは、タイトルはそのことだけを出します。同じ箱、タイトルバーのダブルクリック、「表示」→「小さく表示」(macOS は Cmd+Shift+C、Windows は Ctrl+Shift+C) で戻せます。
 - ウィンドウの中のメニュー (「使用量」「表示」「設定」) には、今すぐ取得、小さく表示、設定があります。macOS では、同じものが画面上部のメニューバーにもあります。
 - 見た目は、プラチナ (Mac OS 8 風、既定) と System 7 風の 2 つから設定で選べます。
