@@ -105,8 +105,8 @@ func (g *gui) newSettingsWindow() *settingsWindow {
 	}
 	sw := &settingsWindow{g: g, labels: map[string]windows.HWND{}}
 	g.settings = sw // settingsProc finds it here while the window is made
-	hwnd := call(procCreateWindowExW, WS_EX_CONTROLPARENT|WS_EX_DLGMODALFRAME, ptr(utf16Ptr(settingsClass)),
-		ptr(utf16Ptr(g.T("settings_title"))), WS_CAPTION|WS_SYSMENU|WS_CLIPCHILDREN,
+	hwnd := call(procCreateWindowExW, WS_EX_CONTROLPARENT|WS_EX_DLGMODALFRAME, uintptr(unsafe.Pointer(utf16Ptr(settingsClass))),
+		uintptr(unsafe.Pointer(utf16Ptr(g.T("settings_title")))), WS_CAPTION|WS_SYSMENU|WS_CLIPCHILDREN,
 		0, 0, 480, 400, uintptr(g.hwnd), 0, uintptr(inst), 0)
 	if hwnd == 0 {
 		g.settings = nil
@@ -130,7 +130,7 @@ func (sw *settingsWindow) font() windows.Handle { return sw.g.fonts.get(sw.scale
 
 // control makes a child window of the given class.
 func (sw *settingsWindow) control(class, text string, style uint32, exStyle uint32, id int) windows.HWND {
-	h := windows.HWND(call(procCreateWindowExW, uintptr(exStyle), ptr(utf16Ptr(class)), ptr(utf16Ptr(text)),
+	h := windows.HWND(call(procCreateWindowExW, uintptr(exStyle), uintptr(unsafe.Pointer(utf16Ptr(class))), uintptr(unsafe.Pointer(utf16Ptr(text))),
 		uintptr(WS_CHILD|WS_VISIBLE|style), 0, 0, 0, 0, uintptr(sw.hwnd), uintptr(id), uintptr(moduleHandle()), 0))
 	sendMessage(h, WM_SETFONT, uintptr(sw.font()), 0)
 	return h
@@ -145,7 +145,7 @@ func (sw *settingsWindow) label(key string) windows.HWND {
 func (sw *settingsWindow) combo(choices []choice) windows.HWND {
 	h := sw.control("COMBOBOX", "", CBS_DROPDOWNLIST|WS_TABSTOP|WS_VSCROLL, 0, 0)
 	for _, c := range choices {
-		sendMessage(h, CB_ADDSTRING, 0, ptr(utf16Ptr(c.name)))
+		sendMessage(h, CB_ADDSTRING, 0, uintptr(unsafe.Pointer(utf16Ptr(c.name))))
 	}
 	return h
 }
@@ -162,7 +162,7 @@ func (sw *settingsWindow) build() {
 
 	sw.label("claude_path_label")
 	sw.path = sw.control("EDIT", "", ES_AUTOHSCROLL|WS_TABSTOP, WS_EX_CLIENTEDGE, 0)
-	sendMessage(sw.path, EM_SETCUEBANNER, 1, ptr(utf16Ptr(sw.T("claude_path_hint"))))
+	sendMessage(sw.path, EM_SETCUEBANNER, 1, uintptr(unsafe.Pointer(utf16Ptr(sw.T("claude_path_hint")))))
 
 	sw.onTop = sw.control("BUTTON", sw.T("always_on_top"), BS_AUTOCHECKBOX|BS_MULTILINE|WS_TABSTOP, 0, 0)
 	sw.compact = sw.control("BUTTON", sw.T("start_compact"), BS_AUTOCHECKBOX|BS_MULTILINE|WS_TABSTOP, 0, 0)

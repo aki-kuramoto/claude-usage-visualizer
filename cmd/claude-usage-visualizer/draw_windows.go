@@ -115,7 +115,7 @@ func (f *fonts) get(s scale, size float64, bold bool) windows.Handle {
 		weight = FW_BOLD
 	}
 	h := windows.Handle(call(procCreateFontW, uintptr(-s.px(size)), 0, 0, 0, uintptr(weight), 0, 0, 0,
-		DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, ptr(utf16Ptr(f.face))))
+		DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, uintptr(unsafe.Pointer(utf16Ptr(f.face)))))
 	f.made[key] = h
 	return h
 }

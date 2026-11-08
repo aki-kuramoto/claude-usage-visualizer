@@ -117,7 +117,7 @@ func (g *gui) trayMenu() {
 	m := call(procCreatePopupMenu)
 	defer call(procDestroyMenu, m)
 	add := func(flags uintptr, id int, s string) {
-		call(procAppendMenuW, m, flags, uintptr(id), ptr(utf16Ptr(s)))
+		call(procAppendMenuW, m, flags, uintptr(id), uintptr(unsafe.Pointer(utf16Ptr(s))))
 	}
 	add(MF_STRING|MF_DEFAULT, cmdShow, g.T("menu_show"))
 	add(MF_STRING, cmdFetch, g.T("menu_fetch_now"))
@@ -172,9 +172,9 @@ func (g *gui) askClose() closeChoice {
 		// Without version 6 of the common controls (a build without the
 		// manifest): Yes, No and Cancel stand for the three.
 		r := call(procMessageBoxW, uintptr(g.hwnd),
-			ptr(utf16Ptr(g.T("close_alert_title")+"\n\n"+g.T("close_alert_message")+"\n"+g.T("close_alert_setting")+"\n\n"+
-				g.T("close_alert_quit")+" / "+g.T("close_alert_close")+" / "+g.T("close_alert_cancel"))),
-			ptr(caption), 0x23) // MB_YESNOCANCEL | MB_ICONQUESTION
+			uintptr(unsafe.Pointer(utf16Ptr(g.T("close_alert_title")+"\n\n"+g.T("close_alert_message")+"\n"+g.T("close_alert_setting")+"\n\n"+
+				g.T("close_alert_quit")+" / "+g.T("close_alert_close")+" / "+g.T("close_alert_cancel")))),
+			uintptr(unsafe.Pointer(caption)), 0x23) // MB_YESNOCANCEL | MB_ICONQUESTION
 		switch r {
 		case 6: // IDYES
 			return closeChoiceQuit

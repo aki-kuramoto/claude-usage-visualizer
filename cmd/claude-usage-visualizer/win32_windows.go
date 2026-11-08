@@ -491,6 +491,15 @@ type MINMAXINFO struct {
 
 // call runs a Win32 procedure and returns its first result, ignoring the
 // error that LazyProc.Call always returns.
+//
+// A pointer passed to it must be converted right in the argument list, as
+// uintptr(unsafe.Pointer(&x)): go:uintptrescapes then moves x to the heap
+// and keeps it alive until the call returns, as LazyProc.Call itself does.
+// Without that, x could stay on the goroutine's stack, which moves when the
+// stack grows, and Windows would read whatever is left at the old place;
+// converted earlier, in a helper, x could be freed during the call.
+//
+//go:uintptrescapes
 func call(p *windows.LazyProc, args ...uintptr) uintptr {
 	r, _, _ := p.Call(args...)
 	return r
@@ -503,8 +512,6 @@ func utf16Ptr(s string) *uint16 {
 	}
 	return p
 }
-
-func ptr(p *uint16) uintptr { return uintptr(unsafe.Pointer(p)) }
 
 func boolArg(b bool) uintptr {
 	if b {
@@ -523,16 +530,20 @@ func pointFromLParam(l uintptr) (int32, int32) {
 
 func rgb(r, g, b uint8) uint32 { return uint32(r) | uint32(g)<<8 | uint32(b)<<16 }
 
+// sendMessage and postMessage take pointers the way call does.
+//
+//go:uintptrescapes
 func sendMessage(hwnd windows.HWND, msg uint32, w, l uintptr) uintptr {
 	return call(procSendMessageW, uintptr(hwnd), uintptr(msg), w, l)
 }
 
+//go:uintptrescapes
 func postMessage(hwnd windows.HWND, msg uint32, w, l uintptr) {
 	call(procPostMessageW, uintptr(hwnd), uintptr(msg), w, l)
 }
 
 func setWindowText(hwnd windows.HWND, s string) {
-	call(procSetWindowTextW, uintptr(hwnd), ptr(utf16Ptr(s)))
+	call(procSetWindowTextW, uintptr(hwnd), uintptr(unsafe.Pointer(utf16Ptr(s))))
 }
 
 func getWindowText(hwnd windows.HWND) string {

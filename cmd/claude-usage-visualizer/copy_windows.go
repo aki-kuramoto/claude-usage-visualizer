@@ -118,7 +118,7 @@ func (g *gui) placeTexts() {
 		g.texts = nil
 		g.textTones = map[windows.HWND]tone{}
 		for _, t := range texts {
-			h := windows.HWND(call(procCreateWindowExW, 0, ptr(utf16Ptr("EDIT")), ptr(utf16Ptr(editText(t.item.Text))),
+			h := windows.HWND(call(procCreateWindowExW, 0, uintptr(unsafe.Pointer(utf16Ptr("EDIT"))), uintptr(unsafe.Pointer(utf16Ptr(editText(t.item.Text)))),
 				WS_CHILD|ES_MULTILINE|ES_READONLY, 0, 0, 0, 0,
 				uintptr(g.hwnd), 0, uintptr(moduleHandle()), 0))
 			sendMessage(h, WM_SETFONT, uintptr(t.font), 0)

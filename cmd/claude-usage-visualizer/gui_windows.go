@@ -148,7 +148,7 @@ func runGUI(p paths.Paths, log *oplog.Log, s settings.Settings) error {
 	// One copy per directory of settings and records: a second start
 	// shows the window of the first and ends.
 	instance := instanceName(p.Base)
-	g.showMessage = uint32(call(procRegisterWindowMessageW, ptr(utf16Ptr(instance+"-show"))))
+	g.showMessage = uint32(call(procRegisterWindowMessageW, uintptr(unsafe.Pointer(utf16Ptr(instance+"-show")))))
 	mutex, err := windows.CreateMutex(nil, false, utf16Ptr(`Local\`+instance))
 	if err == windows.ERROR_ALREADY_EXISTS {
 		postMessage(windows.HWND(HWND_BROADCAST), g.showMessage, 0, 0)
@@ -248,13 +248,13 @@ func (g *gui) createWindow() error {
 	if call(procRegisterClassExW, uintptr(unsafe.Pointer(&wc))) == 0 {
 		return fmt.Errorf("registering the window class failed")
 	}
-	g.taskbarCreated = uint32(call(procRegisterWindowMessageW, ptr(utf16Ptr("TaskbarCreated"))))
+	g.taskbarCreated = uint32(call(procRegisterWindowMessageW, uintptr(unsafe.Pointer(utf16Ptr("TaskbarCreated")))))
 
 	// Borderless: the title bar is drawn by the application, not by
 	// Windows. WS_SYSMENU and WS_MINIMIZEBOX keep the taskbar button's
 	// menu and minimizing from it.
 	style := uintptr(WS_POPUP | WS_CLIPCHILDREN | WS_SYSMENU | WS_MINIMIZEBOX)
-	hwnd := call(procCreateWindowExW, WS_EX_APPWINDOW, ptr(utf16Ptr(mainClass)), ptr(utf16Ptr(appName)),
+	hwnd := call(procCreateWindowExW, WS_EX_APPWINDOW, uintptr(unsafe.Pointer(utf16Ptr(mainClass))), uintptr(unsafe.Pointer(utf16Ptr(appName))),
 		style, 0, 0, 380, 200, 0, 0, uintptr(inst), 0)
 	if hwnd == 0 {
 		return fmt.Errorf("creating the window failed")
@@ -524,7 +524,7 @@ func (g *gui) menuItem(key, shortcut string) string {
 func (g *gui) buildMenu(which int) uintptr {
 	m := call(procCreatePopupMenu)
 	add := func(flags uintptr, id int, s string) {
-		call(procAppendMenuW, m, flags, uintptr(id), ptr(utf16Ptr(s)))
+		call(procAppendMenuW, m, flags, uintptr(id), uintptr(unsafe.Pointer(utf16Ptr(s))))
 	}
 	switch which {
 	case menuUsage:
@@ -849,7 +849,7 @@ func (g *gui) placeButtons() {
 		}
 		g.buttons = nil
 		for i := range keys {
-			h := call(procCreateWindowExW, 0, ptr(utf16Ptr("BUTTON")), ptr(utf16Ptr(texts[i])),
+			h := call(procCreateWindowExW, 0, uintptr(unsafe.Pointer(utf16Ptr("BUTTON"))), uintptr(unsafe.Pointer(utf16Ptr(texts[i]))),
 				WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_PUSHBUTTON, 0, 0, 0, 0,
 				uintptr(g.hwnd), uintptr(cmdButton+i), uintptr(moduleHandle()), 0)
 			sendMessage(windows.HWND(h), WM_SETFONT, uintptr(font), 1)
@@ -1102,7 +1102,7 @@ func cmdEcho(s string) string {
 
 // alert shows a message over the window.
 func (g *gui) alert(msg string) {
-	call(procMessageBoxW, uintptr(g.hwnd), ptr(utf16Ptr(msg)), ptr(utf16Ptr(g.T("window_title"))), 0x30) // MB_ICONWARNING
+	call(procMessageBoxW, uintptr(g.hwnd), uintptr(unsafe.Pointer(utf16Ptr(msg))), uintptr(unsafe.Pointer(utf16Ptr(g.T("window_title")))), 0x30) // MB_ICONWARNING
 }
 
 // --- snapshots for development ---------------------------------------------------
