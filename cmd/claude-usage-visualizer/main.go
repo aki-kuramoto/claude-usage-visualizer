@@ -36,10 +36,13 @@ func main() {
 	}
 
 	// In headless mode the operation log is also printed, since there is
-	// no window to look at.
+	// no window to look at. The window has no standard error to look at,
+	// so it is kept in a file instead.
 	var echo io.Writer
 	if *headless {
 		echo = os.Stderr
+	} else {
+		keepStderr(p.Logs())
 	}
 	log := oplog.New(p.Logs(), echo, os.Stderr)
 

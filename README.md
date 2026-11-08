@@ -81,6 +81,7 @@ Under your home directory (`$HOME` on macOS and Linux, `%USERPROFILE%` on Window
 | `days.setay` | The days (see "Days" below). |
 | `logs/usage-YYYY-MM-DD.jsonl` | The usage record, one line per reading. |
 | `logs/ops-YYYY-MM-DD.jsonl` | The operation log: what the app did and what happened. |
+| `logs/stderr.log` | The window app's standard error, with one line per start. If the app ever quits on its own, the reason is written here. Started afresh once it passes 1 MB. |
 | `work/` | The working directory where the app runs `claude`. It stays empty. |
 | `window.json` | Windows only: where the window was, to open it there again. |
 
@@ -252,6 +253,7 @@ go run ./cmd/claude-usage-visualizer -headless
 | `days.setay` | 日の設定 (下の「日の設定」)。 |
 | `logs/usage-YYYY-MM-DD.jsonl` | 使用量の記録。1 回の取得が 1 行です。 |
 | `logs/ops-YYYY-MM-DD.jsonl` | 動作の記録。アプリが何をし、何が起きたか。 |
+| `logs/stderr.log` | ウィンドウ版アプリの標準エラー出力。起動ごとに 1 行入ります。アプリがひとりでに終了したときは、その原因がここに書かれます。1 MB を超えたら、次の起動で空にしてから書きます。 |
 | `work/` | アプリが `claude` を動かす作業フォルダー。中身は空のままです。 |
 | `window.json` | Windows のみ。ウィンドウの位置。次に開くときにその位置に出します。 |
 
