@@ -3,7 +3,8 @@
 //
 //	icon.svg              the icon on its round plate, filling the canvas (Linux "scalable", and the reference)
 //	png/icon-<n>.png      the same at 16 to 1024 pixels (Linux hicolor, Windows)
-//	AppIcon.icns          macOS, on a square plate with the usual margin around it
+//	AppIcon.icns          macOS, on a square plate with the usual margin around it,
+//	                      the drawing enlarged to nearly fill the plate
 //	icon.ico              Windows, 16 to 256 pixels in one file
 //
 // and the Windows resources of the executable, the icon and the manifest,
@@ -92,9 +93,29 @@ func strokes(small bool) (gw, iw, er float64) {
 }
 
 // shapes returns the icon on a square plate with corners of the given
-// radius, filling the 100 x 100 space: the form macOS expects.
+// radius, filling the 100 x 100 space: the form macOS expects. The drawing
+// is enlarged by macScale, so that it nearly fills the plate.
 func shapes(radius float64, small bool) []shape {
-	return drawing(roundRect{0, 0, 100, 100, radius, face}, small)
+	ss := drawing(roundRect{0, 0, 100, 100, radius, face}, small)
+	k := macScale(small)
+	for i := 1; i < len(ss); i++ {
+		ss[i] = scaled{ss[i], k}
+	}
+	return ss
+}
+
+// macScale is how much the drawing is enlarged on the macOS plate. As
+// drawn, the head fills three quarters of the plate, which left the picture
+// small next to other icons. At 1.3 the gauge comes within about 2% of the
+// plate's edge. The small variant's thicker gauge would then reach past the
+// edge, so it is enlarged only as far as that 2% gap allows.
+func macScale(small bool) float64 {
+	const k, gap = 1.3, 2.0
+	if small {
+		gw, _, _ := strokes(true)
+		return math.Min(k, (50-gap)/(gaugeR+gw/2))
+	}
+	return k
 }
 
 // headR is the radius of the round plate: just enough for the gauge and
@@ -409,6 +430,23 @@ func writeICNS(path string) error {
 }
 
 // --- helpers ----------------------------------------------------------------
+
+// scaled is a shape enlarged k times about the center of the 100 x 100
+// space.
+type scaled struct {
+	s shape
+	k float64
+}
+
+func (s scaled) dist(x, y float64) float64 {
+	return s.k * s.s.dist(50+(x-50)/s.k, 50+(y-50)/s.k)
+}
+
+func (s scaled) svg() string {
+	return fmt.Sprintf(`<g transform="translate(50 50) scale(%g) translate(-50 -50)">%s</g>`, s.k, s.s.svg())
+}
+
+func (s scaled) paint() color.NRGBA { return s.s.paint() }
 
 func encode(img image.Image) []byte {
 	var b bytes.Buffer
