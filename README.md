@@ -53,6 +53,7 @@ go run ./cmd/claude-usage-visualizer -headless
 - One bar for each limit, with the reset time and the time left until it.
 - The vertical line across a bar shows how much of the period until the reset has passed. A bar that reaches past the line means you are using more than the time elapsed would suggest.
 - The thin cuts in a bar are calendar boundaries: local midnight for the weekly limits, the hour (14:00, 15:00, ...) for the five-hour limit. The small dots just below a bar divide the period into equal parts from the reset time (seven for the weekly limits, five for the five-hour limit). The period starts at the reset time, so the two kinds of ticks do not line up.
+- The five-hour limit starts with the first use, so while nothing has been used Claude Code gives no reset time for it. The bar is then drawn as if the period started now: the line at the left edge, and the ticks where they would fall.
 - The small triangle above a weekly bar is the time elapsed counted only by the days you use Claude; the small triangle below it is the time elapsed judged by the days still ahead. Both come from a file you can edit (see "Days" below).
 - When a reading fails, the bars turn gray, and the window says what went wrong and what to do.
 - The title bar is drawn by the app itself, in the style of the classic Mac OS. The box with an X on the left closes the window; the box on the right switches to the **compact view**. Drag the title bar to move the window.
@@ -223,6 +224,7 @@ go run ./cmd/claude-usage-visualizer -headless
 - 枠ごとに、使用率のバー、リセット時刻、リセットまでの残り時間を出します。
 - バーを縦に貫く線は、リセットまでの期間のうち、どれだけ時間が過ぎたかを示します。バーがこの線より右まで伸びていれば、時間の割に使いすぎです。
 - バーの細い切れ目は、カレンダーの区切りです。週の枠ではローカルの日付の変わり目 (0 時)、5 時間枠では時計の正時 (14:00、15:00 など) です。バーのすぐ下の小さな点は、期間をリセットの時刻から等分した区切りです (週の枠は 7 等分、5 時間枠は 5 等分)。期間はリセットの時刻から始まるので、2 種類の区切りはずれます。
+- 5 時間枠は最初に使ったときに始まるので、まだ使っていない間は Claude Code がリセット時刻を出しません。そのときは、いま始まったものとしてバーを描きます (線は左端、区切りはいま始まった場合の位置)。
 - 週の枠のバーの上の小さな三角は、Claude を使う日だけで数えたときの経過です。バーの下の小さな三角は、これから先の日の重みから見た経過です。どちらも、自分で書き換えられるファイルから計算します (下の「日の設定」)。
 - 取得に失敗したときは、バーを灰色にして、何が起きていて何をすればよいかを出します。
 - タイトルバーは、昔の Mac OS の雰囲気でアプリ自身が描いています。左の X の箱で閉じ、右の箱で**小さく表示**に切り替えます。タイトルバーをドラッグすると移動できます。

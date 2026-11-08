@@ -198,6 +198,10 @@ func buildView(st app.State, env viewEnv) []viewItem {
 		reset := parseTime(l.ResetsAt)
 		window := time.Duration(l.WindowSeconds) * time.Second
 		var left time.Duration
+		if l.NotStarted {
+			// Nothing of the period has passed: it has not begun.
+			lv.Marker = 0
+		}
 		if !reset.IsZero() {
 			left = reset.Sub(env.Now)
 			if window > 0 {

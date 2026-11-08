@@ -110,3 +110,31 @@ func TestTicks(t *testing.T) {
 		t.Errorf("no reset time: %v %v", cal, eq)
 	}
 }
+
+func TestPlaceTicksNotStarted(t *testing.T) {
+	tokyo, err := time.LoadLocation("Asia/Tokyo")
+	if err != nil {
+		t.Skip(err)
+	}
+	// 12:30 in Tokyo: a five-hour period starting now would see 13:00 to
+	// 17:00 turn over, the first half an hour in.
+	now := time.Date(2026, 11, 8, 12, 30, 0, 0, tokyo)
+	l := Limit{Label: "Current session", WindowSeconds: 5 * 3600}
+	placeTicks(&l, now, tokyo)
+	if !l.NotStarted || len(l.EqualTicks) != 4 || len(l.CalendarTicks) != 5 || l.CalendarTicks[0] != 0.1 {
+		t.Errorf("not started: %+v", l)
+	}
+
+	// With a reset time the period has begun; without a period nothing can
+	// be placed.
+	l = Limit{ResetsAt: "2026-11-08T08:00:00Z", WindowSeconds: 5 * 3600}
+	placeTicks(&l, now, tokyo)
+	if l.NotStarted || len(l.EqualTicks) != 4 {
+		t.Errorf("started: %+v", l)
+	}
+	l = Limit{}
+	placeTicks(&l, now, tokyo)
+	if l.NotStarted || l.EqualTicks != nil || l.CalendarTicks != nil {
+		t.Errorf("unknown period: %+v", l)
+	}
+}

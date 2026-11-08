@@ -56,6 +56,13 @@ func TestBuildViewOK(t *testing.T) {
 	if items[2].Limit.Marker != -1 || !strings.Contains(items[2].Limit.Info, text(st, "no_reset")) {
 		t.Errorf("%+v", items[2].Limit)
 	}
+
+	// A period that has not begun has its marker at the left edge.
+	st.Limits = []app.Limit{{Label: "Current session", WindowSeconds: 5 * 3600, NotStarted: true}}
+	items = buildView(st, viewEnv{Now: now})
+	if l := items[1].Limit; l.Marker != 0 || !strings.Contains(l.Info, text(st, "no_reset")) {
+		t.Errorf("not started: %+v", l)
+	}
 }
 
 func TestBuildViewLoggedOut(t *testing.T) {

@@ -1187,6 +1187,9 @@ static CUVAppDelegate *delegate;
         double elapsed = -1;
         if (reset && window > 0) {
             elapsed = MIN(MAX(1 - left / window, 0), 1);
+        } else if ([l[@"not_started"] boolValue]) {
+            // The period has not begun, so nothing of it has passed.
+            elapsed = 0;
         }
 
         CUVBarView *bar = [[CUVBarView alloc] init];

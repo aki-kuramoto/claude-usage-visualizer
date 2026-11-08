@@ -73,6 +73,12 @@ type Limit struct {
 	// of the period from 0 to 1 (see ticks).
 	CalendarTicks []float64 `json:"calendar_ticks"`
 	EqualTicks    []float64 `json:"equal_ticks"`
+	// NotStarted says the period has not begun: Claude Code gives no reset
+	// time for a limit nothing has been used against yet (the five-hour
+	// limit starts with the first use). The bar is then drawn as if the
+	// period started now: the time marker at the left edge, and the ticks
+	// where they would go for a period starting now.
+	NotStarted bool `json:"not_started"`
 }
 
 // ticks places two kinds of ticks on a limit's bar.
@@ -115,6 +121,19 @@ func ticks(resetAt string, window time.Duration, loc *time.Location) (calendar, 
 		}
 	}
 	return calendar, equal
+}
+
+// placeTicks fills in l's ticks, and NotStarted. A limit with no reset time
+// but a known period has not begun; its ticks go where they would for a
+// period starting at now.
+func placeTicks(l *Limit, now time.Time, loc *time.Location) {
+	window := time.Duration(l.WindowSeconds) * time.Second
+	reset := l.ResetsAt
+	if reset == "" && window > 0 {
+		l.NotStarted = true
+		reset = now.Add(window).UTC().Format(time.RFC3339)
+	}
+	l.CalendarTicks, l.EqualTicks = ticks(reset, window, loc)
 }
 
 // next is the following midnight or hour on loc's calendar.
@@ -268,8 +287,7 @@ func (c *Controller) State() State {
 	for i := range st.Limits {
 		st.Limits[i].Short = shortLabel(st.Limits[i].Label, st.Strings)
 		st.Limits[i].Primary = st.Limits[i].Label == "Current session" || st.Limits[i].Label == "Current week (all models)"
-		st.Limits[i].CalendarTicks, st.Limits[i].EqualTicks = ticks(
-			st.Limits[i].ResetsAt, time.Duration(st.Limits[i].WindowSeconds)*time.Second, time.Local)
+		placeTicks(&st.Limits[i], time.Now(), time.Local)
 	}
 	st.DateLocale = i18n.DateLocale(st.Lang)
 	st.LanguageNames = map[string]string{}
