@@ -61,6 +61,7 @@ go run ./cmd/claude-usage-visualizer -headless
 - The menu bar inside the window (Usage, View, Settings) has Read Now, Compact View and Settings. On macOS, the same items are also in the menu bar at the top of the screen.
 - Two looks: Platinum (in the style of Mac OS 8, the default) and System 7. Choose in the settings.
 - On Windows, the app also has an icon in the notification area (the system tray). Its tooltip shows the same line as the compact view. Clicking it shows the window; its menu has Read Now, Settings and Quit. Closing the window leaves the app running there (see `close_action` below), and Quit in that menu ends it. Ctrl+R reads now, Ctrl+, opens the settings and Ctrl+W closes the window. The text is in Yu Gothic UI in Japanese and Segoe UI in English, drawn at each monitor's scale.
+- The text in the window can be selected with the mouse and copied (on Windows, all but the lines of each bar). Ctrl+C (Cmd+C on macOS), or Copy in the Usage menu, copies the selection, or all of the contents when nothing is selected, laid out the way a Windows message box copies itself: the title, the text and the buttons between lines of dashes.
 
 ## How the usage is read
 
@@ -233,6 +234,7 @@ go run ./cmd/claude-usage-visualizer -headless
 - ウィンドウの中のメニュー (「使用量」「表示」「設定」) には、今すぐ取得、小さく表示、設定があります。macOS では、同じものが画面上部のメニューバーにもあります。
 - 見た目は、プラチナ (Mac OS 8 風、既定) と System 7 風の 2 つから設定で選べます。
 - Windows では、通知領域 (タスクトレイ) にもアイコンを出します。マウスを載せると、小さく表示と同じ 1 行が出ます。クリックするとウィンドウを出し、右クリックのメニューには今すぐ取得、設定、終了があります。ウィンドウを閉じてもアプリは通知領域で動き続け (下の `close_action`)、このメニューの終了で終わります。Ctrl+R で今すぐ取得、Ctrl+, で設定、Ctrl+W でウィンドウを閉じます。文字は日本語では Yu Gothic UI、英語では Segoe UI で、モニターごとの拡大率に合わせて描きます。
+- ウィンドウの文字はマウスで選択してコピーできます (Windows では、各バーの行を除きます)。Ctrl+C (macOS では Cmd+C) か、使用量メニューのコピーで、選択した部分を、何も選択していなければ内容の全体をコピーします。全体のときは、Windows のメッセージボックスのコピーと同じく、タイトル、本文、ボタンを `-` の線で区切った形になります。
 
 ## 使用量の取り方
 

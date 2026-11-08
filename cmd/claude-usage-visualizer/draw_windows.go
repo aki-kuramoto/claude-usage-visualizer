@@ -401,12 +401,11 @@ func (g *gui) paintContents(p painter, lay *layout, active bool) {
 	for _, pi := range lay.items {
 		it := pi.item
 		switch {
-		case it.Button != "":
-			// a child window
 		case it.Limit != nil:
 			g.paintLimit(p, it.Limit, pi.rect)
 		default:
-			p.text(it.Text, g.fonts.get(s, it.Size, it.Bold), toneColors[it.Tone], pi.rect, DT_LEFT|DT_WORDBREAK|DT_EDITCONTROL)
+			// A button, or text in an edit control (see copy_windows.go):
+			// child windows that draw themselves.
 		}
 	}
 }

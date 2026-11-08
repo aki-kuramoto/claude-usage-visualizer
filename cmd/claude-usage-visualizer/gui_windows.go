@@ -52,6 +52,7 @@ const (
 	cmdClose    = 103
 	cmdShow     = 104
 	cmdQuit     = 105
+	cmdCopy     = 106
 	cmdButton   = 200 // + the index of a button in the contents
 )
 
@@ -98,6 +99,11 @@ type gui struct {
 	buttonKeys []string
 	buttonActs []action
 	buttonFont windows.Handle
+
+	// The contents' text, in edit controls (see copy_windows.go).
+	texts     []windows.HWND
+	textKeys  []string
+	textTones map[windows.HWND]tone
 
 	contentBrush uintptr
 
@@ -263,6 +269,7 @@ func (g *gui) createWindow() error {
 
 	accels := []ACCEL{
 		{FVIRTKEY | FCONTROL, 'R', cmdFetch},
+		{FVIRTKEY | FCONTROL, 'C', cmdCopy},
 		{FVIRTKEY | FCONTROL | FSHIFT, 'C', cmdCompact},
 		{FVIRTKEY | FCONTROL, VK_OEM_COMMA, cmdSettings},
 		{FVIRTKEY | FCONTROL, 'W', cmdClose},
@@ -407,6 +414,10 @@ func mainProc(hwnd windows.HWND, msg uint32, w, l uintptr) uintptr {
 			g.ctrl.NotePower("wake")
 		}
 		return 1
+	case WM_CTLCOLORSTATIC:
+		if brush, ok := g.textColors(w, windows.HWND(l)); ok {
+			return brush
+		}
 	case WM_CTLCOLORBTN:
 		// The corners around the contents' buttons, in the contents' colour.
 		return g.contentBrush
@@ -477,6 +488,8 @@ func (g *gui) boxAt(pt POINT) int {
 }
 
 func (g *gui) mouseDown(pt POINT) {
+	// Away from the text: its selection goes, and Ctrl+C copies everything.
+	call(procSetFocus, uintptr(g.hwnd))
 	if box := g.boxAt(pt); box != boxNone {
 		// Like a button of the classic Mac OS, a box acts when the mouse is
 		// released over it, and looks pressed while held down on it.
@@ -516,6 +529,7 @@ func (g *gui) buildMenu(which int) uintptr {
 	switch which {
 	case menuUsage:
 		add(MF_STRING, cmdFetch, g.menuItem("menu_fetch_now", "Ctrl+R"))
+		add(MF_STRING, cmdCopy, g.menuItem("menu_copy", "Ctrl+C"))
 	case menuView:
 		flags := uintptr(MF_STRING)
 		if g.compact {
@@ -564,6 +578,8 @@ func (g *gui) command(id int) {
 		g.show()
 	case cmdQuit:
 		g.quit()
+	case cmdCopy:
+		g.copy()
 	default:
 		if i := id - cmdButton; i >= 0 && i < len(g.buttonActs) {
 			g.act(g.buttonActs[i])
@@ -690,6 +706,7 @@ func (g *gui) render() {
 
 	g.lay = g.layOut()
 	g.placeButtons()
+	g.placeTexts()
 	call(procSetWindowPos, uintptr(g.hwnd), 0, 0, 0, uintptr(g.lay.width), uintptr(g.lay.height),
 		SWP_NOMOVE|SWP_NOZORDER|SWP_NOACTIVATE)
 	g.invalidate()
@@ -760,16 +777,7 @@ func (g *gui) layOut() layout {
 	textLeft := inset + margin
 	textWidth := lay.width - 2*inset - 2*margin
 	y := top + margin
-	items := buildView(st, viewEnv{
-		Now: time.Now(),
-		DaysElapse: func(reset time.Time, window time.Duration) (float64, bool) {
-			return g.ctrl.DaysElapsed(reset, window, time.Now())
-		},
-		DaysAhead: func(reset time.Time, window time.Duration) (float64, bool) {
-			return g.ctrl.DaysAhead(reset, window, time.Now())
-		},
-		DaysError: g.ctrl.DaysError(),
-	})
+	items := g.viewItems()
 	for i, it := range items {
 		var r RECT
 		switch {
@@ -793,6 +801,20 @@ func (g *gui) layOut() layout {
 	lay.content = RECT{inset, top, lay.width - inset, y}
 	lay.height = y + inset
 	return lay
+}
+
+// viewItems lists the full view's contents as of now.
+func (g *gui) viewItems() []viewItem {
+	return buildView(g.state, viewEnv{
+		Now: time.Now(),
+		DaysElapse: func(reset time.Time, window time.Duration) (float64, bool) {
+			return g.ctrl.DaysElapsed(reset, window, time.Now())
+		},
+		DaysAhead: func(reset time.Time, window time.Duration) (float64, bool) {
+			return g.ctrl.DaysAhead(reset, window, time.Now())
+		},
+		DaysError: g.ctrl.DaysError(),
+	})
 }
 
 func (g *gui) buttonFontFor(s scale) windows.Handle {

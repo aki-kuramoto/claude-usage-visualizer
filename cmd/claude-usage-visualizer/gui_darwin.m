@@ -170,6 +170,8 @@ static NSTextField *makeLabel(NSString *text, CGFloat size, NSColor *color, BOOL
     l.lineBreakMode = NSLineBreakByWordWrapping;
     l.usesSingleLineMode = NO;
     l.preferredMaxLayoutWidth = textWidth;
+    // Selectable, so that an error message can be copied.
+    l.selectable = YES;
     return l;
 }
 
@@ -467,6 +469,12 @@ typedef NS_ENUM(NSInteger, CUVBoxKind) { CUVBoxClose, CUVBoxShade };
 }
 - (BOOL)mouseDownCanMoveWindow {
     return NO;
+}
+// A click away from the text ends its selection, so that Cmd+C copies all
+// of the contents again.
+- (void)mouseDown:(NSEvent *)event {
+    [self.window makeFirstResponder:nil];
+    [super mouseDown:event];
 }
 - (void)drawRect:(NSRect)dirty {
     fillLine(hexColor(themeFor(self)[@"content"]), self.bounds);
@@ -777,6 +785,18 @@ static CUVAppDelegate *delegate;
     goFetchNow();
 }
 
+// copy: reaches here, through the responder chain, when no selected text
+// takes it first: Cmd+C then copies all of the contents, laid out the way a
+// Windows message box copies itself (see copyText in view.go).
+- (void)copy:(id)sender {
+    char *s = goCopyText();
+    NSString *text = [NSString stringWithUTF8String:s] ?: @"";
+    free(s);
+    NSPasteboard *pb = [NSPasteboard generalPasteboard];
+    [pb clearContents];
+    [pb setString:text forType:NSPasteboardTypeString];
+}
+
 // --- menu -------------------------------------------------------------------
 
 - (void)buildMenu {
@@ -947,6 +967,8 @@ static CUVAppDelegate *delegate;
     }
     NSMenu *usage = [[NSMenu alloc] init];
     [self addItem:@"menu_fetch_now" action:@selector(fetchNow:) key:@"r" shift:NO to:usage];
+    // No target: copy: goes to the selected text first, as Cmd+C does.
+    [self addItem:@"menu_copy" action:@selector(copy:) key:@"c" shift:NO to:usage].target = nil;
     NSMenu *view = [[NSMenu alloc] init];
     [self addItem:@"menu_compact" action:@selector(toggleCompact:) key:@"C" shift:YES to:view];
     NSMenu *settings = [[NSMenu alloc] init];
@@ -970,12 +992,13 @@ static CUVAppDelegate *delegate;
     self.menuTitles = titles;
 }
 
-- (void)addItem:(NSString *)key action:(SEL)action key:(NSString *)k shift:(BOOL)shift to:(NSMenu *)menu {
+- (NSMenuItem *)addItem:(NSString *)key action:(SEL)action key:(NSString *)k shift:(BOOL)shift to:(NSMenu *)menu {
     NSMenuItem *item = [menu addItemWithTitle:[self T:key] action:action keyEquivalent:k];
     if (shift) {
         item.keyEquivalentModifierMask = NSEventModifierFlagCommand | NSEventModifierFlagShift;
     }
     item.target = self;
+    return item;
 }
 
 // refreshLook redraws the frame, as when the window comes in front or goes

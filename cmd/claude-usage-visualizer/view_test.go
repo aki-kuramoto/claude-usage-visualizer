@@ -96,3 +96,30 @@ func TestCompactTitle(t *testing.T) {
 		t.Errorf("%q", got)
 	}
 }
+
+func TestCopyText(t *testing.T) {
+	items := []viewItem{
+		{Text: "Not logged in", Bold: true},
+		{Text: "Log in again."},
+		{Text: "Log in", Button: actionLogin},
+		{Limit: &limitView{Label: "Current session", Percent: "0%", Info: "No reset time · 0% of the time elapsed"}},
+	}
+	want := "---------------------------\r\n" +
+		"Claude Code usage\r\n" +
+		"---------------------------\r\n" +
+		"Not logged in\r\n" +
+		"Log in again.\r\n" +
+		"\r\n" +
+		"Current session\t0%\r\n" +
+		"No reset time · 0% of the time elapsed\r\n" +
+		"\r\n" +
+		"---------------------------\r\n" +
+		"Log in   \r\n" +
+		"---------------------------\r\n"
+	if got := copyText("Claude Code usage", items); got != want {
+		t.Errorf("got\n%q\nwant\n%q", got, want)
+	}
+	if got := copyText("T", []viewItem{{Text: "a"}}); got != "---------------------------\r\nT\r\n---------------------------\r\na\r\n\r\n---------------------------\r\n" {
+		t.Errorf("no buttons: %q", got)
+	}
+}

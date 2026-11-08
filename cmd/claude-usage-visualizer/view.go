@@ -316,3 +316,41 @@ func formatTime(t time.Time, locale string) string {
 	}
 	return fmt.Sprintf("%s, %d/%d, %d:%02d %s", enWeekdays[t.Weekday()], t.Month(), t.Day(), h, t.Minute(), ampm)
 }
+
+// copyRule is the line that separates the parts of copyText, as in the text
+// a Windows message box puts on the clipboard for Ctrl+C.
+const copyRule = "---------------------------"
+
+// copyText is the window's contents as plain text, for copying all of it:
+// laid out the way a Windows message box copies itself, with the title, the
+// text and the buttons between rules. Lines end in CRLF, which every program
+// on Windows reads and macOS ones do too.
+func copyText(title string, items []viewItem) string {
+	var lines []string
+	var buttons []string
+	for _, it := range items {
+		switch {
+		case it.Button != "":
+			buttons = append(buttons, it.Text)
+		case it.Limit != nil:
+			l := it.Limit
+			// A blank line sets each limit apart from what is above it.
+			if len(lines) > 0 {
+				lines = append(lines, "")
+			}
+			lines = append(lines, l.Label+"\t"+l.Percent)
+			if l.Info != "" {
+				lines = append(lines, l.Info)
+			}
+		case it.Text != "":
+			lines = append(lines, it.Text)
+		}
+	}
+	out := []string{copyRule, title, copyRule}
+	out = append(out, lines...)
+	out = append(out, "", copyRule)
+	if len(buttons) > 0 {
+		out = append(out, strings.Join(buttons, "   ")+"   ", copyRule)
+	}
+	return strings.Join(out, "\r\n") + "\r\n"
+}

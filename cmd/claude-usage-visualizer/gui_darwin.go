@@ -203,6 +203,25 @@ func shellQuote(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }
 
+// goCopyText returns the contents as text for Cmd+C (see copyText), with
+// macOS line ends. The caller frees the result.
+//
+//export goCopyText
+func goCopyText() *C.char {
+	st := controller.State()
+	items := buildView(st, viewEnv{
+		Now: time.Now(),
+		DaysElapse: func(reset time.Time, window time.Duration) (float64, bool) {
+			return controller.DaysElapsed(reset, window, time.Now())
+		},
+		DaysAhead: func(reset time.Time, window time.Duration) (float64, bool) {
+			return controller.DaysAhead(reset, window, time.Now())
+		},
+		DaysError: controller.DaysError(),
+	})
+	return C.CString(strings.ReplaceAll(copyText(text(st, "window_title"), items), "\r\n", "\n"))
+}
+
 //export goNoteWindow
 func goNoteWindow(what *C.char) {
 	controller.NoteWindow(C.GoString(what))
