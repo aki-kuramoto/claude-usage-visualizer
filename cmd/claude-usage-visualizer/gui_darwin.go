@@ -86,6 +86,16 @@ func goSaveSettings(settingsJSON *C.char) *C.char {
 	return nil
 }
 
+// goFormatTime writes the time at unixSeconds (seconds since 1970) for the
+// locale, as every window writes times (see formatTime). The caller frees
+// the result.
+//
+//export goFormatTime
+func goFormatTime(unixSeconds C.double, locale *C.char) *C.char {
+	t := time.Unix(0, int64(float64(unixSeconds)*1e9))
+	return C.CString(formatTime(t, C.GoString(locale)))
+}
+
 // goDaysElapsed tells how much of the period ending at resetUnix (seconds
 // since 1970) has passed, counting days by their weight in days.setay, or
 // -1 when there is nothing to show.

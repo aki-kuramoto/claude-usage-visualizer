@@ -295,9 +295,10 @@ var (
 	enWeekdays = []string{"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"}
 )
 
-// formatTime shows a time in the machine's local time zone, the way the
-// macOS window does for the locale: "10/17(金) 1:30" in Japanese, "Fri,
-// 10/17, 1:30 AM" in English.
+// formatTime shows a time in the machine's local time zone for the locale:
+// "10/17(金) 1:30" in Japanese, "Fri, 10/17, 1:30 AM" in English. Every
+// window writes times with it, the macOS one included, so that a time reads
+// the same everywhere and copies with plain spaces only.
 func formatTime(t time.Time, locale string) string {
 	if t.IsZero() {
 		return "-"

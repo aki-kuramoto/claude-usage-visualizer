@@ -190,21 +190,19 @@ static NSDate *parseTime(id value) {
 }
 
 // formatTime shows a time in the machine's local time zone, in the given
-// locale, with the hour written the way the locale usually writes it:
-// "10/17(金) 1:30" in Japanese, "Fri, 10/17, 1:30 AM" in English.
+// locale: "10/17(金) 1:30" in Japanese, "Fri, 10/17, 1:30 AM" in English.
+// Go writes it (see formatTime in view.go), so that the time reads the same
+// on every OS and in the text copied from the window. NSDateFormatter is not
+// used: it puts U+202F (a narrow no-break space) before AM and PM, which
+// copies as an odd character.
 static NSString *formatTime(NSDate *d, NSString *locale) {
     if (!d) {
         return @"-";
     }
-    static NSDateFormatter *f;
-    static NSString *fLocale;
-    if (!f || ![fLocale isEqualToString:locale]) {
-        f = [[NSDateFormatter alloc] init];
-        f.locale = [NSLocale localeWithLocaleIdentifier:locale];
-        [f setLocalizedDateFormatFromTemplate:@"MdEjm"];
-        fLocale = [locale copy];
-    }
-    return [f stringFromDate:d];
+    char *s = goFormatTime(d.timeIntervalSince1970, (char *)locale.UTF8String);
+    NSString *text = [NSString stringWithUTF8String:s] ?: @"-";
+    free(s);
+    return text;
 }
 
 // fill puts value in place of {name} in text.
