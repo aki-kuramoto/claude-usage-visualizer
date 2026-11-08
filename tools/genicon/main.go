@@ -1,9 +1,9 @@
 // genicon draws the application icon and writes it in the forms each OS
 // wants, into assets/icon:
 //
-//	icon.svg              the icon, edge to edge (Linux "scalable", and the reference)
+//	icon.svg              the icon on its round plate, filling the canvas (Linux "scalable", and the reference)
 //	png/icon-<n>.png      the same at 16 to 1024 pixels (Linux hicolor, Windows)
-//	AppIcon.icns          macOS, with the usual margin around the shape
+//	AppIcon.icns          macOS, on a square plate with the usual margin around it
 //	icon.ico              Windows, 16 to 256 pixels in one file
 //
 // and the Windows resources of the executable, the icon and the manifest,
@@ -80,18 +80,55 @@ type shape interface {
 	paint() color.NRGBA
 }
 
-// shapes returns the icon. small gives thicker lines, for 24 pixels and
-// below, where the normal lines blur into the background.
-func shapes(radius float64, small bool) []shape {
-	gw, iw, er := gaugeW, inkW, earR
+// strokes returns the widths of the gauge and the face's strokes and the
+// ears' radius. small gives thicker lines, for 24 pixels and below, where
+// the normal lines blur into the background; the thicker gauge needs larger
+// ears to stay covered.
+func strokes(small bool) (gw, iw, er float64) {
 	if small {
-		// The thicker gauge needs larger ears to stay covered.
-		gw, iw, er = 13, 8.5, 9
+		return 13, 8.5, 9
 	}
+	return gaugeW, inkW, earR
+}
+
+// shapes returns the icon on a square plate with corners of the given
+// radius, filling the 100 x 100 space: the form macOS expects.
+func shapes(radius float64, small bool) []shape {
+	return drawing(roundRect{0, 0, 100, 100, radius, face}, small)
+}
+
+// headR is the radius of the round plate: just enough for the gauge and
+// the ears.
+func headR(small bool) float64 {
+	gw, _, er := strokes(small)
+	return math.Max(gaugeR+gw/2, earDist+er)
+}
+
+// roundShapes returns the icon on a round plate, the head, with nothing
+// around it: the form for Windows and Linux, whose icons are shapes rather
+// than tiles. Drawn with roundMargin, the head fills the canvas.
+func roundShapes(small bool) []shape {
+	return drawing(circle{50, 50, headR(small), face}, small)
+}
+
+// roundPad is the space left around the head, in the 100 x 100 space, so
+// that its antialiased edge is not cut off.
+const roundPad = 0.5
+
+// roundMargin is render's margin that makes the head fill the canvas. It is
+// negative: the 100 x 100 space is larger than the canvas.
+func roundMargin(small bool) float64 {
+	k := 50 / (headR(small) + roundPad) // how much larger than the canvas
+	return (1 - k) / 2
+}
+
+// drawing puts the gauge and the face on plate.
+func drawing(plate shape, small bool) []shape {
+	gw, iw, er := strokes(small)
 	t := earAngle * math.Pi / 180
 	ex, ey := earDist*math.Cos(t), earDist*math.Sin(t)
 	return []shape{
-		roundRect{0, 0, 100, 100, radius, face},
+		plate,
 		arc{50, 50, gaugeR, gw, gaugeStart, gaugeEnd, track},
 		arc{50, 50, gaugeR, gw, redStart, redEnd, red},
 		arc{50, 50, gaugeR, gw, gaugeStart, amberEnd, amber},
@@ -117,13 +154,15 @@ func main() {
 		fail(err)
 	}
 
-	// Edge to edge, for Windows, Linux and the SVG.
-	if err := os.WriteFile(filepath.Join(out, "icon.svg"), []byte(svgOf(shapes(22, false))), 0o644); err != nil {
+	// The round head filling the canvas, for Windows, Linux and the SVG.
+	v := headR(false) + roundPad
+	if err := os.WriteFile(filepath.Join(out, "icon.svg"), []byte(svgOf(roundShapes(false), 50-v, 2*v)), 0o644); err != nil {
 		fail(err)
 	}
 	pngs := map[int][]byte{}
 	for _, n := range []int{16, 24, 32, 48, 64, 128, 256, 512, 1024} {
-		data := encode(render(shapes(22, n <= smallBelow), n, 0))
+		small := n <= smallBelow
+		data := encode(render(roundShapes(small), n, roundMargin(small)))
 		pngs[n] = data
 		if err := os.WriteFile(filepath.Join(out, "png", fmt.Sprintf("icon-%d.png", n)), data, 0o644); err != nil {
 			fail(err)
@@ -184,9 +223,11 @@ func render(ss []shape, n int, margin float64) *image.NRGBA {
 	return img
 }
 
-func svgOf(ss []shape) string {
+// svgOf writes the shapes as SVG, showing the square of side size whose top
+// left corner is at (from, from).
+func svgOf(ss []shape, from, size float64) string {
 	var b strings.Builder
-	b.WriteString(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">` + "\n")
+	fmt.Fprintf(&b, `<svg xmlns="http://www.w3.org/2000/svg" viewBox="%g %g %g %g" width="100" height="100">`+"\n", from, from, size, size)
 	for _, s := range ss {
 		b.WriteString("  " + s.svg() + "\n")
 	}
