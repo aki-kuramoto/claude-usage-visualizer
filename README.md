@@ -119,10 +119,12 @@ Logging in may take two attempts: in one case, the first authentication in the b
 
 Claude Code's login expires. When it is close to expiring, Claude Code says so ("Your login expires in 3 days · run /login to renew") right after the interactive screen starts, but only there: neither `claude -p` nor `claude auth status` reports it.
 
-So about once a day (and shortly after starting, and right after you log in again), the app starts the interactive `claude` on a pseudo terminal for a few seconds and reads whether that warning is on the screen. If it is, the window says how many days are left and offers the "Log In…" button.
+So about once a day (and shortly after starting, and right after you log in again), the app starts the interactive `claude` on a pseudo terminal for a few seconds and reads whether that warning is on the screen. If it is, the window says how many days are left and offers the "Log In…" and "Check Again" buttons.
 
+- After you log in with the "Log In…" button, the app looks again by itself once the login has succeeded, and the warning goes away. If you logged in some other way (with `/login` in Claude Code, say), press "Check Again".
 - Nothing is typed, so no conversation starts and nothing is recorded.
 - Each check takes a few seconds of CPU and runs your SessionStart hooks. MCP servers are not started.
+- Each check uses a very small part of your plan: when the interactive `claude` starts, Claude Code itself sends the model one tiny request (a one-word message answered with at most one token), as its debug log (`--debug-file`) shows. This is why the app looks only once a day, after a login, and when you ask.
 - It reads text on a screen, so a change in Claude Code's screen may break it.
 - It works on macOS, Linux and Windows (on Windows through the pseudo console, ConPTY).
 
@@ -292,10 +294,12 @@ go run ./cmd/claude-usage-visualizer -headless
 
 Claude Code のログインには期限があります。期限が近づくと、Claude Code は対話画面の起動直後に「Your login expires in 3 days · run /login to renew」と知らせますが、この知らせは対話画面にしか出ません。`claude -p` にも `claude auth status` にも出てきません。
 
-そこでアプリは、1 日 1 回ほど (起動の少しあとと、ログインし直した直後にも)、対話モードの `claude` を疑似端末で数秒だけ起動し、画面にこの知らせが出ていないかを読みます。出ていれば、期限まであと何日かと「ログインする…」ボタンを出します。
+そこでアプリは、1 日 1 回ほど (起動の少しあとと、ログインし直した直後にも)、対話モードの `claude` を疑似端末で数秒だけ起動し、画面にこの知らせが出ていないかを読みます。出ていれば、期限まであと何日かと、「ログインする…」と「もう一度確かめる」のボタンを出します。
 
+- 「ログインする…」ボタンからログインし直すと、ログインが成功したところでアプリが自分でもう一度確かめ、知らせは消えます。ほかの方法 (Claude Code の `/login` など) でログインし直したときは、「もう一度確かめる」を押してください。
 - 何も入力しないので、会話は始まらず、記録も残りません。
 - 1 回ごとに数秒の CPU を使い、ユーザーの SessionStart のフックが実行されます。MCP サーバーは起動しません。
+- 1 回ごとに、プランの使用量をごくわずかに使います。対話モードの `claude` は起動するときに、Claude Code 自身がモデルにごく小さな要求 (1 語のメッセージを送り、応答は最大 1 トークン) を 1 件送るためです。Claude Code のデバッグの記録 (`--debug-file`) で確かめられます。アプリが確かめるのを 1 日 1 回と、ログインのあとと、ボタンを押したときに絞っているのはこのためです。
 - 画面の文字を読む仕組みなので、Claude Code の画面が変わると読めなくなることがあります。
 - macOS、Linux、Windows で動きます (Windows では疑似コンソール ConPTY を使います)。
 

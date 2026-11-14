@@ -32,6 +32,7 @@ const (
 	actionLogin    action = "login"
 	actionSettings action = "settings"
 	actionTrust    action = "trust"
+	actionRecheck  action = "recheck"
 )
 
 // defaultSpacing is the gap below an item that sets none of its own.
@@ -160,6 +161,13 @@ func buildView(st app.State, env viewEnv) []viewItem {
 		case "days":
 			add(viewItem{Text: fill(text(st, "expiry_days"), "days", fmt.Sprint(e.DaysLeft)), Size: 12, Tone: toneOrange, Bold: true})
 			add(viewItem{Text: text(st, "login_button"), Button: actionLogin})
+			// For a login made some other way: the login button's own
+			// console makes the app look again by itself.
+			again := text(st, "recheck_button")
+			if st.ExpiryChecking {
+				again = text(st, "rechecking")
+			}
+			add(viewItem{Text: again, Button: actionRecheck})
 		case "trust_needed":
 			add(viewItem{Text: text(st, "expiry_trust"), Size: 11, Tone: toneSecondary})
 			add(viewItem{Text: text(st, "trust_button"), Button: actionTrust})

@@ -1184,7 +1184,17 @@ static CUVAppDelegate *delegate;
     if ([exp[@"status"] isEqualToString:@"days"]) {
         NSString *msg = fill([self T:@"expiry_days"], @"days", [exp[@"days_left"] stringValue] ?: @"?");
         [self addFullWidth:makeLabel(msg, 12, [NSColor systemOrangeColor], YES) spacingAfter:-1];
-        [self.stack addArrangedSubview:[NSButton buttonWithTitle:[self T:@"login_button"] target:self action:@selector(openLogin:)]];
+        // Next to the button for logging in, one for looking again, for a
+        // login made some other way (the login button's own terminal makes
+        // the app look again by itself once the login has succeeded).
+        BOOL checking = [s[@"expiry_checking"] boolValue];
+        NSButton *again = [NSButton buttonWithTitle:[self T:checking ? @"rechecking" : @"recheck_button"]
+                                             target:self
+                                             action:@selector(checkExpiryAgain:)];
+        again.enabled = !checking;
+        [self.stack addArrangedSubview:[self row:@[
+            [NSButton buttonWithTitle:[self T:@"login_button"] target:self action:@selector(openLogin:)], again
+        ]]];
     } else if ([exp[@"status"] isEqualToString:@"trust_needed"]) {
         [self addFullWidth:makeLabel([self T:@"expiry_trust"], 11, [NSColor secondaryLabelColor], NO) spacingAfter:-1];
         [self.stack addArrangedSubview:[NSButton buttonWithTitle:[self T:@"trust_button"] target:self action:@selector(openTrust:)]];
@@ -1357,6 +1367,10 @@ static CUVAppDelegate *delegate;
         free(err);
         [alert beginSheetModalForWindow:self.window completionHandler:nil];
     }
+}
+
+- (void)checkExpiryAgain:(id)sender {
+    goCheckExpiryNow();
 }
 
 - (void)openLogin:(id)sender {

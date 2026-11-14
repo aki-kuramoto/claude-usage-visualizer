@@ -602,6 +602,8 @@ func (g *gui) act(a action) {
 		g.showSettings()
 	case actionTrust:
 		g.openTrust()
+	case actionRecheck:
+		g.ctrl.CheckExpiryNow("manual")
 	}
 }
 
@@ -994,7 +996,8 @@ func (g *gui) placeInitially() {
 // --- logging in and trusting the folder -----------------------------------------
 
 // openLogin opens a console window running "claude auth login", the way to
-// log in again.
+// log in again. When the login succeeds, the script writes the marker that
+// tells the controller to look at the login's expiry again.
 func (g *gui) openLogin() {
 	script := filepath.Join(g.ctrl.WorkDir(), "login.cmd")
 	err := func() error {
@@ -1002,9 +1005,11 @@ func (g *gui) openLogin() {
 		if err != nil {
 			return err
 		}
+		marker := g.ctrl.PrepareLogin()
 		body := "@echo off\r\n" +
 			"rem Written by claude-usage-visualizer to log Claude Code in again.\r\n" +
 			"call " + cmdQuote(path) + " auth login\r\n" +
+			"if not errorlevel 1 type nul > " + cmdQuote(marker) + "\r\n" +
 			"pause\r\n"
 		return runScript(script, body, nil)
 	}()

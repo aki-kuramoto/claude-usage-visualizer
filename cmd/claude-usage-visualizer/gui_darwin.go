@@ -139,8 +139,10 @@ func goDaysError() *C.char {
 
 // goOpenLogin opens Terminal running "claude auth login", the way to log in
 // again. It writes a small script and opens it: opening a .command file runs
-// it in Terminal without asking for permission to control Terminal. It
-// returns NULL, or an error message that the caller frees.
+// it in Terminal without asking for permission to control Terminal. When the
+// login succeeds, the script writes the marker that tells the controller to
+// look at the login's expiry again. It returns NULL, or an error message that
+// the caller frees.
 //
 //export goOpenLogin
 func goOpenLogin() *C.char {
@@ -150,9 +152,10 @@ func goOpenLogin() *C.char {
 		if err != nil {
 			return err
 		}
+		marker := controller.PrepareLogin()
 		body := "#!/bin/sh\n" +
 			"# Written by claude-usage-visualizer to log Claude Code in again.\n" +
-			"exec " + shellQuote(path) + " auth login\n"
+			shellQuote(path) + " auth login && : > " + shellQuote(marker) + "\n"
 		if err := os.MkdirAll(filepath.Dir(script), 0o755); err != nil {
 			return err
 		}
@@ -169,6 +172,14 @@ func goOpenLogin() *C.char {
 		return C.CString(err.Error())
 	}
 	return nil
+}
+
+// goCheckExpiryNow looks at the login's expiry again, for the button next to
+// the warning that the login expires soon.
+//
+//export goCheckExpiryNow
+func goCheckExpiryNow() {
+	controller.CheckExpiryNow("manual")
 }
 
 // goOpenTrust opens Terminal running the interactive claude in the working

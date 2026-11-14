@@ -123,3 +123,27 @@ func TestCopyText(t *testing.T) {
 		t.Errorf("no buttons: %q", got)
 	}
 }
+
+// The warning that the login expires soon comes with a button for logging
+// in and one for looking again, which says so while a look is going on.
+func TestBuildViewExpiryButtons(t *testing.T) {
+	st := state(i18n.English)
+	st.Status = app.StatusOK
+	st.LoginExpiry = &app.LoginExpiry{Status: "days", DaysLeft: 3}
+	buttons := func() map[action]string {
+		got := map[action]string{}
+		for _, it := range buildView(st, viewEnv{Now: time.Now()}) {
+			if it.Button != "" {
+				got[it.Button] = it.Text
+			}
+		}
+		return got
+	}
+	if b := buttons(); b[actionLogin] != "Log In…" || b[actionRecheck] != "Check Again" {
+		t.Errorf("buttons: %v", b)
+	}
+	st.ExpiryChecking = true
+	if b := buttons(); b[actionRecheck] != "Checking…" {
+		t.Errorf("while checking: %v", b)
+	}
+}

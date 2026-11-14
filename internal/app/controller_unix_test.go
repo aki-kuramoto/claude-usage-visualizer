@@ -313,3 +313,83 @@ func TestCheckExpiry(t *testing.T) {
 		t.Errorf("off: %q %+v", got, c.State().LoginExpiry)
 	}
 }
+
+// After the login terminal is opened, the marker its script writes once the
+// login has succeeded makes the controller look at the expiry once. Another
+// look asked for by a login right after is skipped; one asked for by hand
+// is not.
+func TestLoginDoneLooksAtExpiry(t *testing.T) {
+	savedSettle, savedFirst, savedEvery := expiry.Settle, expiryFirst, loginWatchEvery
+	expiry.Settle, expiryFirst, loginWatchEvery = 300*time.Millisecond, time.Hour, 20*time.Millisecond
+	defer func() { expiry.Settle, expiryFirst, loginWatchEvery = savedSettle, savedFirst, savedEvery }()
+
+	p := paths.Paths{Base: t.TempDir()}
+	fake := filepath.Join(p.Base, "claude")
+	os.WriteFile(fake, []byte(expiryClaude), 0o755)
+	s := settings.Default()
+	s.ClaudePath = fake
+	rec := &recorder{}
+	c := New(p, oplog.New(p.Logs(), nil, nil), s, rec.publish)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		c.runExpiry(ctx)
+		close(done)
+	}()
+	defer func() {
+		cancel()
+		<-done
+	}()
+
+	looks := func() int { return strings.Count(readLogs(t, p.Logs(), "ops"), `"kind":"login_expiry"`) }
+	waitLooks := func(n int) {
+		t.Helper()
+		for deadline := time.Now().Add(10 * time.Second); time.Now().Before(deadline); time.Sleep(20 * time.Millisecond) {
+			if looks() >= n && !c.State().ExpiryChecking {
+				return
+			}
+		}
+		t.Fatalf("%d looks, want %d", looks(), n)
+	}
+
+	// A marker left from before is removed, and is no reason to look.
+	marker := c.LoginDoneMarker()
+	os.MkdirAll(filepath.Dir(marker), 0o755)
+	os.WriteFile(marker, nil, 0o644)
+	if got := c.PrepareLogin(); got != marker {
+		t.Fatalf("marker %q, want %q", got, marker)
+	}
+	if _, err := os.Stat(marker); err == nil {
+		t.Fatal("the old marker is still there")
+	}
+	c.NoteLoginOpened("login.command", nil)
+	time.Sleep(100 * time.Millisecond)
+	if n := looks(); n != 0 {
+		t.Fatalf("looked %d times before the login finished", n)
+	}
+
+	// The login finishes.
+	os.WriteFile(marker, nil, 0o644)
+	waitLooks(1)
+	if ops := readLogs(t, p.Logs(), "ops"); !strings.Contains(ops, `"reason":"login_done"`) {
+		t.Errorf("ops:\n%s", ops)
+	}
+	if _, err := os.Stat(marker); err == nil {
+		t.Error("the marker was not removed")
+	}
+	rec.waitFor(t, func(st State) bool { return st.ExpiryChecking })
+
+	// The same login, found restored a minute later: already looked at.
+	c.CheckExpiryNow("login_restored")
+	time.Sleep(200 * time.Millisecond)
+	if n := looks(); n != 1 {
+		t.Errorf("%d looks after login_restored, want 1", n)
+	}
+
+	// The button for looking again always looks.
+	c.CheckExpiryNow("manual")
+	waitLooks(2)
+	if st := c.State(); st.LoginExpiry == nil || st.LoginExpiry.Status != expiry.StatusDays {
+		t.Errorf("state: %+v", st.LoginExpiry)
+	}
+}

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -200,6 +201,9 @@ type State struct {
 	// about the login's expiry (see package expiry), or nil before the
 	// first look or when the check is off.
 	LoginExpiry *LoginExpiry `json:"login_expiry"`
+	// ExpiryChecking is true while the login's expiry is being looked at,
+	// so that the window can say so on its button for looking again.
+	ExpiryChecking bool `json:"expiry_checking"`
 
 	// Lang is the language the window speaks, decided from the setting and
 	// the OS's preferred languages; Strings is its text (see package i18n)
@@ -236,6 +240,8 @@ type Controller struct {
 	loggedOut  bool   // the latest reading found claude not logged in
 
 	expiryTriggers chan string
+	lastExpiry     time.Time // when the latest look at the expiry ended
+	loginWatch     int       // counts the watches for the login to finish; only the latest goes on
 }
 
 // New prepares a controller. publish is called, from the controller's own
@@ -395,13 +401,65 @@ func (c *Controller) loginRestored() bool {
 	return true
 }
 
-// NoteLoginOpened logs that a terminal was opened to log in.
+// LoginDoneMarker is the file the login script writes when "claude auth
+// login" has succeeded. The window writes the script; it calls
+// PrepareLogin first, which removes a marker left from before.
+func (c *Controller) LoginDoneMarker() string {
+	return filepath.Join(c.paths.Work(), "login.done")
+}
+
+// PrepareLogin removes the marker of an earlier login and returns its path,
+// for the script about to be written.
+func (c *Controller) PrepareLogin() string {
+	marker := c.LoginDoneMarker()
+	os.Remove(marker)
+	return marker
+}
+
+// NoteLoginOpened logs that a terminal was opened to log in, and then
+// watches for the login to finish (see LoginDoneMarker), to look at the
+// login's expiry once at that point: a warning that the login expires soon
+// would otherwise stay until the next daily look. Logging in elsewhere
+// leaves no marker; the window's button for looking again covers that.
 func (c *Controller) NoteLoginOpened(script string, err error) {
 	data := map[string]any{"script": script}
 	if err != nil {
 		data["error"] = err.Error()
 	}
 	c.log.Add(oplog.KindLoginOpened, "", data)
+	if err != nil {
+		return
+	}
+	c.mu.Lock()
+	c.loginWatch++
+	watch := c.loginWatch
+	c.mu.Unlock()
+	go c.watchLoginDone(watch)
+}
+
+// loginWatchEvery is how often the login marker is looked for, and
+// loginWatchFor for how long after the terminal is opened.
+var (
+	loginWatchEvery = 5 * time.Second
+	loginWatchFor   = 30 * time.Minute
+)
+
+func (c *Controller) watchLoginDone(watch int) {
+	marker := c.LoginDoneMarker()
+	for end := time.Now().Add(loginWatchFor); time.Now().Before(end); {
+		time.Sleep(loginWatchEvery)
+		c.mu.Lock()
+		latest := c.loginWatch == watch
+		c.mu.Unlock()
+		if !latest {
+			return // the login terminal was opened again; that watch goes on
+		}
+		if _, err := os.Stat(marker); err == nil {
+			os.Remove(marker)
+			c.CheckExpiryNow("login_done")
+			return
+		}
+	}
 }
 
 // DaysElapsed tells how much of the period that ends at reset has passed at
@@ -723,11 +781,32 @@ var (
 )
 
 // CheckExpiryNow asks for a look at the login's expiry outside the schedule.
+// It is ignored while a look is going on: that look's result is as new.
+// Each look starts the interactive claude, which sends one tiny request to
+// the model (about ten tokens), so the reasons below ask only when needed.
 func (c *Controller) CheckExpiryNow(reason string) {
+	if c.State().ExpiryChecking {
+		return
+	}
 	select {
 	case c.expiryTriggers <- reason:
 	default:
 	}
+}
+
+// expiryRepeat is how soon after a look one asked for by a login (finished
+// in the terminal, or found restored) is skipped as already done: both may
+// come for the same login.
+const expiryRepeat = 2 * time.Minute
+
+// skipExpiry tells whether a look asked for with reason can be skipped.
+func (c *Controller) skipExpiry(reason string) bool {
+	if reason != "login_done" && reason != "login_restored" {
+		return false
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return !c.lastExpiry.IsZero() && time.Since(c.lastExpiry) < expiryRepeat
 }
 
 // runExpiry checks the login's expiry on its own schedule until ctx ends.
@@ -743,6 +822,9 @@ func (c *Controller) runExpiry(ctx context.Context) {
 		case <-timer.C:
 		case reason = <-c.expiryTriggers:
 			timer.Stop()
+			if c.skipExpiry(reason) {
+				continue // next stays as it was
+			}
 		}
 		status := c.checkExpiry(ctx, reason)
 		wait := ExpiryInterval
@@ -762,6 +844,8 @@ func (c *Controller) checkExpiry(ctx context.Context, reason string) expiry.Stat
 		return ""
 	}
 	start := time.Now()
+	c.setExpiryChecking(true)
+	defer c.setExpiryChecking(false)
 	var r expiry.Result
 	a, err := c.checkAuth("")
 	switch {
@@ -789,6 +873,16 @@ func (c *Controller) checkExpiry(ctx context.Context, reason string) expiry.Stat
 	})
 	c.setExpiry(&LoginExpiry{Status: r.Status, DaysLeft: r.DaysLeft, CheckedAt: FormatTime(time.Now())})
 	return r.Status
+}
+
+func (c *Controller) setExpiryChecking(on bool) {
+	c.mu.Lock()
+	c.state.ExpiryChecking = on
+	if !on {
+		c.lastExpiry = time.Now()
+	}
+	c.mu.Unlock()
+	c.publishState()
 }
 
 func (c *Controller) setExpiry(e *LoginExpiry) {
